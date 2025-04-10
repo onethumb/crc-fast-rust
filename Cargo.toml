@@ -1,0 +1,77 @@
+[package]
+name = "crc-fast"
+version = "1.0.0"
+edition = "2021"
+authors = ["Don MacAskill"]
+license = "MIT OR Apache 2.0"
+keywords = ["crc", "checksum", "simd", "accelerated", "fast"]
+categories = ["algorithms", "encoding", "hardware-support"]
+repository = "https://github.com/awesomized/crc-fast-rust"
+description = "Hardware-accelerated CRC-32 and CRC-64 checksum calculation using SIMD"
+readme = "README.md"
+
+# 1.69.0 added VPCLMULQDQ x86 detection support, 1.70.0 added LLVM 16 which supports PMULL2 on Aarch64
+rust-version = "1.70"
+
+[lib]
+name = "crc_fast"
+crate-type = ["lib", "cdylib"]
+bench = true
+
+[dependencies]
+crc = "3"
+digest = "0.10"
+rand = "0.9"
+libc = "0.2.171"
+regex = "1.11.1"
+
+[dev-dependencies]
+criterion = "0.5"
+cbindgen = "0.28"
+bindgen = "0.71"
+
+[build-dependencies]
+cc = { version = "1.2", features = ["parallel"] }
+
+# lto=true has a big improvement in performance
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
+opt-level = 3
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+[features]
+# enable VPCLMULQDQ support in Rust for x86_64 using nightly toolchain builds
+vpclmulqdq = []
+
+# enable using fast-crc32 optimized C implementations for CRC-32/ISCSI and CRC-32/ISO-HDLC, automatically detected
+optimize_crc32_auto = []
+
+# the following features enable forcing custom optimized build features (rather than "auto" which attemps to pick the
+# best) for CRC-32/ISCSI and CRC-32/ISO-HDLC calculations, since architecture support and performance varies
+
+# aarch64 NEON options
+optimize_crc32_neon_eor3_v9s3x2e_s3 = []
+optimize_crc32_neon_v12e_v1 = []
+optimize_crc32_neon_v3s4x2e_v2 = []
+
+# blends eor3_v9s3x2e_s3 for "large" (>1KiB) payloads, and v12e_v1 for "small" ones, which tends to yield the best
+# results on modern aarch64 such as Graviton and Apple Silicon
+optimize_crc32_neon_blended = []
+
+# x86 SSE+ options
+# this will blend automagically for CRC-32/ISO-HDLC which tends to have poor hardware support, but typically great
+# support for CRC-32/ISCSI
+optimize_crc32_avx512_vpclmulqdq_v3x2 = []
+
+# non-blended alternatives
+optimize_crc32_avx512_v4s3x3 = []
+optimize_crc32_sse_v4s3x3 = []
+
+[lints.rust]
+# build-time feature enablement
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(optimized_crc32_iscsi)','cfg(optimized_crc32_iso_hdlc)' ] }

@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    # used when called manually.
+  workflow_call:
+    # used when called by _another_ workflow (not when called on this repo!)
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # not pinning to commit since this is a GitHub action, which we trust
+      - id: cache-cargo
+        name: Cache Cargo toolchain
+        uses: actions/cache@v4 # not pinning to commit since this is a GitHub action, which we trust
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-release
+      - if: ${{ steps.cache-cargo.outputs.cache-hit != 'true' }}
+        name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1 # not pinning to commit since this is an archived GitHub action, which we trust
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Architecture check
+        run: cargo run arch-check
+      - name: Architecture check (Optimized)
+        run: cargo run --features=optimize_crc32_auto arch-check
+      - name: Format
+        run: cargo fmt -- --check
+      - name: Clippy
+        run: cargo clippy
+      - name: Test
+        run: cargo test
+      - name: Test (Optimized)
+        run: cargo test --features=optimize_crc32_auto
