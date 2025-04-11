@@ -1,7 +1,7 @@
 `crc-fast`
 ===========
 
-[![Build status](https://github.com/awesomized/crc-fast-rust/workflows/Tests/badge.svg)](https://github.com/awesomized/crc-fast-rust/actions?query=workflow%3ATests)
+[![Test status](https://github.com/awesomized/crc-fast-rust/workflows/Tests/badge.svg)](https://github.com/awesomized/crc-fast-rust/actions?query=workflow%3ATests)
 [![Latest Version](https://img.shields.io/crates/v/crc-fast.svg)](https://crates.io/crates/crc-fast)
 [![Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/crc-fast)
 
