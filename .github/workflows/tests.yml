@@ -4,18 +4,21 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    # used when called manually.
-  workflow_call:
-    # used when called by _another_ workflow (not when called on this repo!)
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust-toolchain:
+          - "1.81" # minimum for this crate
+          - "stable"
+          - "nightly"
     steps:
-      - uses: actions/checkout@v4 # not pinning to commit since this is a GitHub action, which we trust
+      - uses: actions/checkout@v4 # not pinning to commit hash since this is a GitHub action, which we trust
       - id: cache-cargo
         name: Cache Cargo toolchain
-        uses: actions/cache@v4 # not pinning to commit since this is a GitHub action, which we trust
+        uses: actions/cache@v4 # not pinning to commit hash since this is a GitHub action, which we trust
         with:
           path: |
             ~/.cargo/bin/
@@ -26,10 +29,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-release
       - if: ${{ steps.cache-cargo.outputs.cache-hit != 'true' }}
         name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1 # not pinning to commit since this is an archived GitHub action, which we trust
+        uses: actions-rs/toolchain@v1 # not pinning to commit hash since this is an archived GitHub action, which we trust
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: ${{ matrix.rust-toolchain }}
           override: true
       - name: Architecture check
         run: cargo run arch-check
