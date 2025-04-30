@@ -1,17 +1,17 @@
 [package]
 name = "crc-fast"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["Don MacAskill"]
 license = "MIT OR Apache-2.0"
 keywords = ["crc", "checksum", "simd", "accelerated", "fast"]
 categories = ["algorithms", "encoding", "hardware-support"]
 repository = "https://github.com/awesomized/crc-fast-rust"
-description = "Hardware-accelerated CRC-32 and CRC-64 checksum calculation using SIMD"
+description = "Fast, hardware-accelerated CRC-32 and CRC-64 checksum calculation using SIMD"
 readme = "README.md"
 
 # 1.69.0 added VPCLMULQDQ x86 detection support, 1.70.0 added LLVM 16 which supports PMULL2 on Aarch64
-rust-version = "1.70"
+rust-version = "1.81"
 
 [lib]
 name = "crc_fast"
@@ -28,7 +28,7 @@ regex = "1.11.1"
 [dev-dependencies]
 criterion = "0.5"
 cbindgen = "0.28"
-bindgen = "0.71"
+bindgen = "0.70" # 0.70 is the last version that supports Rust 1.81 due to 'unsafe extern' blocks
 
 [build-dependencies]
 cc = { version = "1.2", features = ["parallel"] }
