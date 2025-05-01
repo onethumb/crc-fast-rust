@@ -19,7 +19,6 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9 # v1.12.0
         with:
           toolchain: ${{ matrix.rust-toolchain }}
-          profile: minimal
           components: rustfmt, clippy
       - name: Check
         run: cargo check
