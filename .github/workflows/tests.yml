@@ -27,9 +27,11 @@ jobs:
         run: cargo run arch-check
       - name: Architecture check (Optimized)
         run: cargo run --features=optimize_crc32_auto arch-check
-      - name: Format
+      - if: ${{ matrix.rust-toolchain != 'nightly' }}
+        name: Format
         run: cargo fmt -- --check
-      - name: Clippy
+      - if: ${{ matrix.rust-toolchain != 'nightly' }}
+        name: Clippy
         run: cargo clippy
       - name: Test
         run: cargo test
