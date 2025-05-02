@@ -20,7 +20,7 @@ bench = true
 
 [dependencies]
 crc = "3"
-digest = "0.10"
+digest = {  version = "0.10", features = ["alloc"] }
 rand = "0.9"
 libc = "0.2.171"
 regex = "1.11.1"
@@ -45,6 +45,8 @@ name = "benchmark"
 harness = false
 
 [features]
+alloc = []
+
 # enable VPCLMULQDQ support in Rust for x86_64 using nightly toolchain builds
 vpclmulqdq = []
 

@@ -181,6 +181,7 @@ type CalculatorFn = fn(
 /// The `Digest` struct maintains the state of the CRC computation, including
 /// the current state, the amount of data processed, the CRC parameters, and
 /// the calculator function used to perform the CRC calculation.
+#[derive(Copy, Clone, Debug)]
 pub struct Digest {
     /// The current state of the CRC computation.
     state: u64,
@@ -242,6 +243,10 @@ impl DynDigest for Digest {
     #[inline(always)]
     fn output_size(&self) -> usize {
         self.params.width as usize / 8
+    }
+
+    fn box_clone(&self) -> Box<dyn DynDigest> {
+        Box::new(self.clone())
     }
 }
 

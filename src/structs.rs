@@ -6,7 +6,7 @@ use crate::arch;
 use crate::traits::{CrcCalculator, CrcWidth};
 use crate::CrcAlgorithm;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct CrcParams {
     pub algorithm: CrcAlgorithm,
     pub name: &'static str,
