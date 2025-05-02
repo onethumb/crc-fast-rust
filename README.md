@@ -44,7 +44,7 @@ You'll need to adjust if you want to optimize with [feature flags](Cargo.toml).
 
 ## Usage
 
-Add `crc-fast = { version = "1.2", features = ["optimize_crc32_auto"] }` to your `Cargo.toml` dependencies, which will
+Add `crc-fast = { version = "1.1", features = ["optimize_crc32_auto"] }` to your `Cargo.toml` dependencies, which will
 enable every available optimization for the `stable` toolchain. Adjust as necessary for your desired 
 [acceleration targets](#acceleration-targets).
 
