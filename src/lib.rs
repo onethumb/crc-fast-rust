@@ -246,7 +246,7 @@ impl DynDigest for Digest {
     }
 
     fn box_clone(&self) -> Box<dyn DynDigest> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 }
 
