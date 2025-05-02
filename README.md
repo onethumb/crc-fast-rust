@@ -44,6 +44,10 @@ You'll need to adjust if you want to optimize with [feature flags](Cargo.toml).
 
 ## Usage
 
+Add `crc-fast = { version = "1.2", features = ["optimize_crc32_auto"] }` to your `Cargo.toml` dependencies, which will
+enable every available optimization for the `stable` toolchain. Adjust as necessary for your desired 
+[acceleration targets](#acceleration-targets).
+
 ### Digest
 
 Implements the [digest::DynDigest](https://docs.rs/digest/latest/digest/trait.DynDigest.html)
@@ -155,7 +159,7 @@ variant, and all of them were "reflected" variants.
 In contrast, this library accelerates _every known variant_ (and should accelerate any future variants without changes),
 including all the "non-reflected" variants.
 
-## Important variants
+## Important CRC variants
 
 While there are [many variants](https://reveng.sourceforge.io/crc-catalogue/all.htm#crc.cat.crc-32-iso-hdlc), three
 stand out as being the most important and widely used (all of which are "reflected"):
