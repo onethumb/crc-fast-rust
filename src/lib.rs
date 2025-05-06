@@ -859,12 +859,14 @@ mod lib {
 
     /// Tests whether the CRC-32/ISO-HDLC bindings are up-to-date
     #[test]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     fn test_crc32_iso_hdlc_bindings() -> Result<(), String> {
         build_bindgen("crc32_iso_hdlc", "src/bindings/crc32_iso_hdlc.rs")
     }
 
     /// Tests whether the CRC-32/ISCSI bindings are up-to-date
     #[test]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     fn test_crc32_iscsi_bindings() -> Result<(), String> {
         build_bindgen("crc32_iscsi", "src/bindings/crc32_iscsi.rs")
     }

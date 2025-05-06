@@ -4,13 +4,13 @@
 #![allow(dead_code)]
 
 use crate::structs::CrcParams;
-use crc::Crc;
+use crc::{Crc, Table};
 
-pub struct CrcTestConfig<T: crc::Width> {
+pub struct CrcTestConfig<T: crc::Width, I: crc::Implementation + 'static> {
     pub params: CrcParams,
-    pub reference_impl: &'static Crc<T>,
+    pub reference_impl: &'static Crc<T, I>,
 }
 
-pub type Crc32TestConfig = CrcTestConfig<u32>;
+pub type Crc32TestConfig = CrcTestConfig<u32, Table<16>>;
 
-pub type Crc64TestConfig = CrcTestConfig<u64>;
+pub type Crc64TestConfig = CrcTestConfig<u64, Table<16>>;

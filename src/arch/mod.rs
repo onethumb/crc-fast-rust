@@ -5,8 +5,13 @@
 //! It dispatches to the appropriate architecture-specific implementation
 //! based on the target architecture.
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 use crate::algorithm;
-use crate::structs::{CrcParams, Width32, Width64};
+
+use crate::structs::CrcParams;
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+use crate::structs::{Width32, Width64};
 
 #[cfg(target_arch = "aarch64")]
 use crate::arch::aarch64::AArch64Ops;
@@ -18,6 +23,7 @@ use crate::arch::x86::X86Ops;
 use crate::arch::vpclmulqdq::VpclmulqdqOps;
 
 pub(crate) mod aarch64;
+mod software;
 mod vpclmulqdq;
 pub(crate) mod x86;
 
@@ -70,10 +76,8 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
         }
     }
 
-    #[cfg(not(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")))]
-    {
-        compile_error!("Unsupported architecture for SIMD CRC calculation");
-    }
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    return software::update(state, bytes, params);
 }
 
 pub fn get_target() -> String {
@@ -88,7 +92,7 @@ pub fn get_target() -> String {
     return "internal-x86-sse-pclmulqdq".to_string();
 
     #[cfg(not(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")))]
-    compile_error!("Unsupported architecture for SIMD CRC calculation");
+    return "software-fallback".to_string();
 }
 
 #[cfg(test)]

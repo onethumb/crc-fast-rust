@@ -1,5 +1,7 @@
 // Copyright 2025 Don MacAskill. Licensed under MIT or Apache-2.0.
 
+#![cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -7,6 +9,7 @@ use std::arch::aarch64::*;
 use std::arch::x86::*;
 
 use crate::traits::ArchOps;
+
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 

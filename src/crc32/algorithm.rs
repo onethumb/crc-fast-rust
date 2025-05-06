@@ -3,6 +3,8 @@
 //! This module provides the CRC-32 algorithm implementations for areas where it differs from
 //! CRC-64.
 
+#![cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+
 use crate::algorithm;
 use crate::consts::CRC_CHUNK_SIZE;
 use crate::crc32::consts::{PSHUFB_SHF_TABLE_FORWARD, PSHUFB_SHF_TABLE_REVERSE, SIMD_CONSTANTS};

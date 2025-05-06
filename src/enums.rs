@@ -60,12 +60,14 @@ impl Display for CrcAlgorithm {
     }
 }
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum Reflector<T> {
     NoReflector,
     ForwardReflector { smask: T },
 }
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 /// Different processing strategies based on data length
 pub(crate) enum DataChunkProcessor {
     From0To15,   // 0-15 bytes
@@ -74,6 +76,7 @@ pub(crate) enum DataChunkProcessor {
     From32To255, // 32-255 bytes
 }
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 impl DataChunkProcessor {
     /// Select the appropriate processor based on data length
     pub fn for_length(len: usize) -> Self {

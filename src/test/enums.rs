@@ -66,7 +66,7 @@ impl AnyCrcTestConfig {
 
     pub fn with_reference_impl<F, R>(&self, f: F) -> R
     where
-        F: FnOnce(Option<&Crc<u32>>, Option<&Crc<u64>>) -> R,
+        F: FnOnce(Option<&Crc<u32, crc::Table<16>>>, Option<&Crc<u64, crc::Table<16>>>) -> R,
     {
         match self {
             AnyCrcTestConfig::CRC32(cfg) => f(Some(cfg.reference_impl), None),

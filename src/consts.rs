@@ -90,3 +90,43 @@ pub(crate) const CRC64_EXPONENTS: [u64; 21] = [
     64 * 4,
     64 * 5,
 ];
+
+// for software fallbacks and testing
+pub(crate) const RUST_CRC32_AIXM: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_AIXM);
+
+pub(crate) const RUST_CRC32_AUTOSAR: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_AUTOSAR);
+
+pub(crate) const RUST_CRC32_BASE91_D: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_BASE91_D);
+
+pub(crate) const RUST_CRC32_BZIP2: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_BZIP2);
+
+pub(crate) const RUST_CRC32_CD_ROM_EDC: crc::Crc<u32> =
+    crc::Crc::<u32>::new(&crc::CRC_32_CD_ROM_EDC);
+
+pub(crate) const RUST_CRC32_CKSUM: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_CKSUM);
+
+pub(crate) const RUST_CRC32_ISCSI: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISCSI);
+
+pub(crate) const RUST_CRC32_ISO_HDLC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
+
+pub(crate) const RUST_CRC32_JAMCRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_JAMCRC);
+
+pub(crate) const RUST_CRC32_MEF: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_MEF);
+
+pub(crate) const RUST_CRC32_MPEG_2: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_MPEG_2);
+
+pub(crate) const RUST_CRC32_XFER: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_XFER);
+
+pub(crate) const RUST_CRC64_ECMA_182: crc::Crc<u64> = crc::Crc::<u64>::new(&crc::CRC_64_ECMA_182);
+
+pub(crate) const RUST_CRC64_GO_ISO: crc::Crc<u64> = crc::Crc::<u64>::new(&crc::CRC_64_GO_ISO);
+
+pub(crate) const RUST_CRC64_MS: crc::Crc<u64> = crc::Crc::<u64>::new(&crc::CRC_64_MS);
+
+pub(crate) const RUST_CRC64_NVME: crc::Crc<u64> = crc::Crc::<u64>::new(&CRC_64_NVME);
+
+pub(crate) const RUST_CRC64_REDIS: crc::Crc<u64> = crc::Crc::<u64>::new(&crc::CRC_64_REDIS);
+
+pub(crate) const RUST_CRC64_WE: crc::Crc<u64> = crc::Crc::<u64>::new(&crc::CRC_64_WE);
+
+pub(crate) const RUST_CRC64_XZ: crc::Crc<u64> = crc::Crc::<u64>::new(&crc::CRC_64_XZ);
