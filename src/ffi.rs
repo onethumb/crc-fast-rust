@@ -87,6 +87,8 @@ pub extern "C" fn crc_fast_digest_update(
 
     unsafe {
         let digest = &mut *(*handle).0;
+
+        #[allow(clippy::unnecessary_cast)]
         let bytes = slice::from_raw_parts(data as *const u8, len);
         digest.update(bytes);
     }
@@ -187,6 +189,7 @@ pub extern "C" fn crc_fast_checksum(
         return 0;
     }
     unsafe {
+        #[allow(clippy::unnecessary_cast)]
         let bytes = slice::from_raw_parts(data as *const u8, len);
         crate::checksum(algorithm.into(), bytes)
     }
