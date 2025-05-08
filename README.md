@@ -9,7 +9,10 @@ Fast, hardware-accelerated CRC calculation for
 [all known CRC-32 and CRC-64 variants](https://reveng.sourceforge.io/crc-catalogue/all.htm) using SIMD intrinsics,
 which can exceed _100GiB/s_ for `CRC-32`, and _50GiB/s_ for `CRC-64`, on modern systems. 
 
-The [crc crate](https://crates.io/crates/crc) is ~0.5GiB/s, so this is 
+Supports acceleration on `aarch64`, `x86_64`, and `x86` architectures, plus has a safe non-accelerated software 
+fallback for other architectures.
+
+The [crc crate](https://crates.io/crates/crc) is ~0.5GiB/s by default, so this is 
 [up to >200X faster](#tldr-just-tell-me-how-to-turn-it-up-to-11-), and even the most conservative baseline settings 
 are >27X.
 
