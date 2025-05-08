@@ -7,7 +7,7 @@ on:
 
 jobs:
   test-accelerated:
-    name: Test accelerated architectures (aarch64, x86_64)
+    name: Test accelerated (aarch64, x86_64)
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
@@ -40,7 +40,7 @@ jobs:
         run: cargo test --features=optimize_crc32_auto
 
   test-x86:
-    name:  Test accelerated architectures (x86)
+    name:  Test accelerated (x86)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -62,10 +62,10 @@ jobs:
       - name: Test
         run: cross test --target ${{ matrix.target }}
       - name: Test (Optimized)
-        run: cargo test --features=optimize_crc32_auto --target ${{ matrix.target }}
-        
+        run: cross test --features=optimize_crc32_auto --target ${{ matrix.target }}
+
   test-software:
-    name: Test software fallback architectures
+    name: Test software fallback
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -87,4 +87,4 @@ jobs:
       - name: Test
         run: cross test --target ${{ matrix.target }}
       - name: Test (Optimized)
-        run: cargo test --features=optimize_crc32_auto --target ${{ matrix.target }}
+        run: cross test --features=optimize_crc32_auto --target ${{ matrix.target }}
