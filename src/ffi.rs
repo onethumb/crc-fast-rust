@@ -5,6 +5,8 @@
 //! This module provides a C-compatible interface for the Rust library, allowing
 //! C programs to use the library's functionality.
 
+#![cfg(any(target_arch = "aarch64", target_arch = "x86_64", target_arch = "x86"))]
+
 use crate::CrcAlgorithm;
 use crate::{get_calculator_target, Digest};
 use std::ffi::CStr;
