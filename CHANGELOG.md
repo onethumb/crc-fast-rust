@@ -1,5 +1,8 @@
 # Changes for crc-fast-rust
 
+## [1.2.2](https://github.com/awesomized/crc-fast-rust/releases/tag/1.2.2) - 2025-06-02
+* [Remove println! from software fallback](https://github.com/awesomized/crc-fast-rust/pull/4)
+
 ## [1.2.1](https://github.com/awesomized/crc-fast-rust/releases/tag/1.2.1) - 2025-05-10
 * [Limit FFI to supported architectures](https://github.com/awesomized/crc-fast-rust/commit/55b967bf623953879fdce74447a9b84f820ac879)
 
