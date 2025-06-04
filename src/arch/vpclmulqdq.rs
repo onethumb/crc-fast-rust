@@ -37,14 +37,15 @@ impl Simd256 {
     }
 
     #[inline]
-    #[target_feature(enable = "avx2", enable = "vpclmulqdq")]
-    unsafe fn fold_32(&self, coeff: &Self) -> Self {
-        let result = _mm256_xor_si256(
+    #[target_feature(enable = "avx2,avx512f,avx512vl,vpclmulqdq")]
+    unsafe fn fold_32(&self, coeff: &Self, new_data: &Self) -> Self {
+        // XOR3
+        Self(_mm256_ternarylogic_epi64(
             _mm256_clmulepi64_epi128(self.0, coeff.0, 0x00),
             _mm256_clmulepi64_epi128(self.0, coeff.0, 0x11),
-        );
-
-        Self(result)
+            new_data.0,
+            0x96,
+        ))
     }
 
     #[inline]
@@ -118,7 +119,7 @@ impl Simd256 {
 impl VpclmulqdqOps {
     /// Process aligned blocks using VPCLMULQDQ
     #[inline]
-    #[target_feature(enable = "avx2,vpclmulqdq,sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "avx2,vpclmulqdq,sse2,sse4.1,pclmulqdq,avx512f,avx512vl")]
     unsafe fn process_vpclmulqdq_blocks<W: EnhancedCrcWidth>(
         &self,
         state: &mut CrcState<<VpclmulqdqOps as ArchOps>::Vector>,
@@ -165,7 +166,7 @@ impl VpclmulqdqOps {
                     Simd256::from_m128i_pair(block[i * 2 + 1], block[i * 2]),
                 );
 
-                *chunk = chunk.fold_32(&coeff).xor(&reflected_chunk);
+                *chunk = chunk.fold_32(&coeff, &reflected_chunk);
             }
         }
 
@@ -325,7 +326,7 @@ impl ArchOps for VpclmulqdqOps {
     type Vector = __m128i;
 
     #[inline]
-    #[target_feature(enable = "avx2,vpclmulqdq,sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "avx2,vpclmulqdq,sse2,sse4.1,pclmulqdq,avx512f,avx512vl")]
     unsafe fn process_enhanced_simd_blocks<W: EnhancedCrcWidth>(
         &self,
         state: &mut CrcState<Self::Vector>,
@@ -534,5 +535,16 @@ impl ArchOps for VpclmulqdqOps {
     #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
     unsafe fn carryless_mul_11(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         self.0.carryless_mul_11(a, b)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2,vpclmulqdq,avx512f,avx512vl")]
+    unsafe fn xor3_vectors(
+        &self,
+        a: Self::Vector,
+        b: Self::Vector,
+        c: Self::Vector,
+    ) -> Self::Vector {
+        self.0.xor3_vectors(a, b, c)
     }
 }

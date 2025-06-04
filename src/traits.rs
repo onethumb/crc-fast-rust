@@ -221,6 +221,15 @@ pub trait ArchOps: Sized + Copy + Clone {
 
     /// Perform carryless multiplication with immediate value 0x11 (high 64 bits of both vectors)
     unsafe fn carryless_mul_11(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector;
+
+    /// XOR three vectors together: a XOR b XOR c
+    /// Uses native XOR3 instructions when available, falls back to two XOR operations otherwise
+    unsafe fn xor3_vectors(
+        &self,
+        a: Self::Vector,
+        b: Self::Vector,
+        c: Self::Vector,
+    ) -> Self::Vector;
 }
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
@@ -247,9 +256,13 @@ pub trait EnhancedCrcWidth: CrcWidth {
     where
         T::Vector: Copy;
 
-    /// Perform width-specific folding operations
-    unsafe fn fold_16<T: ArchOps>(state: &mut CrcState<T::Vector>, coefficient: T::Vector, ops: &T)
-    where
+    /// Perform width-specific folding operations using CLMUL and two XOR operations (or one XOR3)
+    unsafe fn fold_16<T: ArchOps>(
+        state: &mut CrcState<T::Vector>,
+        coefficient: T::Vector,
+        new_data: T::Vector,
+        ops: &T,
+    ) where
         T::Vector: Copy;
 
     /// Fold width-specific number of bytes

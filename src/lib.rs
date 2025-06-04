@@ -105,10 +105,10 @@
 //! assert_eq!(checksum.unwrap(), 0xcbf43926);
 //! ```
 
-// if VPCLMULQDQ is enabled, enable extra AVX512 features
+// if VPCLMULQDQ or AVX512 is enabled, enable extra AVX512 features
 #![cfg_attr(
-    feature = "vpclmulqdq",
-    feature(avx512_target_feature, stdarch_x86_avx512)
+    any(feature = "vpclmulqdq", feature = "avx512"),
+    feature(stdarch_x86_avx512)
 )]
 
 use crate::crc32::consts::{

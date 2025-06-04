@@ -76,8 +76,12 @@ impl EnhancedCrcWidth for crate::structs::Width32 {
     }
 
     #[inline(always)]
-    unsafe fn fold_16<T: ArchOps>(state: &mut CrcState<T::Vector>, coeff: T::Vector, ops: &T)
-    where
+    unsafe fn fold_16<T: ArchOps>(
+        state: &mut CrcState<T::Vector>,
+        coeff: T::Vector,
+        new_data: T::Vector,
+        ops: &T,
+    ) where
         T::Vector: Copy,
     {
         // For CRC-32, we need to handle the 32-bit sections of each 64-bit value
@@ -95,7 +99,7 @@ impl EnhancedCrcWidth for crate::structs::Width32 {
             )
         };
 
-        state.value = ops.xor_vectors(h, l);
+        state.value = ops.xor3_vectors(h, l, new_data);
     }
 
     /// CRC-32 specific implementation for folding 8 bytes to 4 bytes

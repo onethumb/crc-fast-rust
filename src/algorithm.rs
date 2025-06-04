@@ -209,10 +209,10 @@ unsafe fn process_simd_chunks<T: ArchOps, W: EnhancedCrcWidth>(
             };
 
             // Fold 16 bytes
-            W::fold_16(&mut temp_state, coeff, ops);
+            W::fold_16(&mut temp_state, coeff, yi, ops);
 
             // XOR with new data
-            *xi = ops.xor_vectors(temp_state.value, yi);
+            *xi = temp_state.value;
         }
     }
 
@@ -235,8 +235,9 @@ unsafe fn process_simd_chunks<T: ArchOps, W: EnhancedCrcWidth>(
             value: x[i],
             reflected: state.reflected,
         };
-        W::fold_16(&mut temp_state, coeff, ops);
-        res = ops.xor_vectors(res, temp_state.value);
+        W::fold_16(&mut temp_state, coeff, res, ops);
+
+        res = temp_state.value
     }
 
     // Perform final reduction and update state
@@ -338,10 +339,9 @@ where
     };
 
     // Fold 16 bytes using width-specific method
-    W::fold_16(&mut temp_state, coefficient, ops);
+    W::fold_16(&mut temp_state, coefficient, new_data, ops);
 
-    // XOR with new data
-    ops.xor_vectors(temp_state.value, new_data)
+    temp_state.value
 }
 
 /// Process inputs between 17 and 31 bytes
@@ -513,9 +513,9 @@ where
             (xmm2_blended, temp_state)
         };
 
-        W::fold_16(&mut temp_state, coefficient, ops);
+        W::fold_16(&mut temp_state, coefficient, xmm2_blended, ops);
 
-        ops.xor_vectors(temp_state.value, xmm2_blended)
+        temp_state.value
     } else {
         // For non-reflected mode (CRC-32f, CRC-64f)
 
@@ -548,8 +548,8 @@ where
             reflected,
         };
 
-        W::fold_16(&mut temp_state, coefficient, ops);
+        W::fold_16(&mut temp_state, coefficient, xmm2_blended, ops);
 
-        ops.xor_vectors(temp_state.value, xmm2_blended)
+        temp_state.value
     }
 }

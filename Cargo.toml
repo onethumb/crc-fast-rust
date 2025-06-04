@@ -50,6 +50,9 @@ alloc = []
 # enable VPCLMULQDQ support in Rust for x86_64 using nightly toolchain builds
 vpclmulqdq = []
 
+# enable AVX512 support in Rust for x86_64 using nightly toolchain builds
+avx512 = []
+
 # enable using fast-crc32 optimized C implementations for CRC-32/ISCSI and CRC-32/ISO-HDLC, automatically detected
 optimize_crc32_auto = []
 
