@@ -114,7 +114,7 @@ impl EnhancedCrcWidth for crate::structs::Width64 {
             let clmul1 = ops.carryless_mul_00(x, mu_poly);
             let clmul2 = ops.carryless_mul_10(clmul1, mu_poly);
             let clmul1_shifted = ops.shift_left_8(clmul1);
-            let final_xor = ops.xor_vectors(ops.xor_vectors(clmul2, clmul1_shifted), x);
+            let final_xor = ops.xor3_vectors(clmul2, clmul1_shifted, x);
 
             ops.extract_u64s(final_xor)[1]
         } else {

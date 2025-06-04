@@ -192,7 +192,7 @@ impl VpclmulqdqOps {
 
     /// Fold from 4 x 256-bit to 1 x 128-bit
     #[inline]
-    #[target_feature(enable = "avx2,sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "avx2,sse2,sse4.1,pclmulqdq,avx512f,avx512vl,vpclmulqdq")]
     unsafe fn fold_from_256_to_128(
         &self,
         x: [Simd256; 4],
@@ -242,7 +242,7 @@ impl VpclmulqdqOps {
             // Fold and XOR
             let folded = self.carryless_mul_00(v128[i], fold_coefficients[i]);
             let folded2 = self.carryless_mul_11(v128[i], fold_coefficients[i]);
-            acc = self.xor_vectors(acc, self.xor_vectors(folded, folded2));
+            acc = self.xor3_vectors(acc, folded, folded2);
         }
 
         acc
