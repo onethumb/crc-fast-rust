@@ -226,29 +226,30 @@ impl ArchOps for X86Ops {
     unsafe fn carryless_mul_11(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         _mm_clmulepi64_si128(a, b, 0x11)
     }
-
+    
     #[inline]
-    #[cfg_attr(
-        any(feature = "vpclmulqdq", feature = "avx512"),
-        target_feature(enable = "avx512f,avx512vl")
-    )]
-    #[cfg_attr(
-        all(not(feature = "vpclmulqdq"), not(feature = "avx512")),
-        target_feature(enable = "sse2,sse4.1")
-    )]
+    #[cfg(any(feature = "vpclmulqdq", feature = "avx512"))]
+    #[target_feature(enable = "avx512f,avx512vl")]
     unsafe fn xor3_vectors(
         &self,
         a: Self::Vector,
         b: Self::Vector,
         c: Self::Vector,
     ) -> Self::Vector {
-        #[cfg(any(feature = "vpclmulqdq", feature = "avx512"))]
-        if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl") {
-            return _mm_ternarylogic_epi64(
-                a, b, c, 0x96, // XOR3
-            );
-        }
+        _mm_ternarylogic_epi64(
+            a, b, c, 0x96, // XOR3
+        )
+    }
 
+    #[inline]
+    #[cfg(not(any(feature = "vpclmulqdq", feature = "avx512")))]
+    #[target_feature(enable = "sse2,sse4.1")]
+    unsafe fn xor3_vectors(
+        &self,
+        a: Self::Vector,
+        b: Self::Vector,
+        c: Self::Vector,
+    ) -> Self::Vector {
         // x86 doesn't have native XOR3 in SSE, use two XORs
         _mm_xor_si128(_mm_xor_si128(a, b), c)
     }
