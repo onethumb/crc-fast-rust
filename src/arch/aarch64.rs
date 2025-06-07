@@ -6,7 +6,6 @@
 
 use crate::traits::ArchOps;
 use std::arch::aarch64::*;
-use std::arch::is_aarch64_feature_detected;
 
 #[derive(Debug, Copy, Clone)]
 pub struct AArch64Ops;
@@ -268,7 +267,7 @@ impl ArchOps for AArch64Ops {
     ) -> Self::Vector {
         veor3q_u8(a, b, c)
     }
-    
+
     #[inline]
     #[cfg(not(target_feature = "sha3"))]
     #[target_feature(enable = "neon")]

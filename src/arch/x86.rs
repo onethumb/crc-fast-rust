@@ -226,7 +226,7 @@ impl ArchOps for X86Ops {
     unsafe fn carryless_mul_11(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         _mm_clmulepi64_si128(a, b, 0x11)
     }
-    
+
     #[inline]
     #[cfg(any(feature = "vpclmulqdq", feature = "avx512"))]
     #[target_feature(enable = "avx512f,avx512vl")]
