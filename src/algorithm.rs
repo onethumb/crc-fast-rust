@@ -327,7 +327,7 @@ where
 unsafe fn fold_and_xor<T: ArchOps, W: EnhancedCrcWidth>(
     current: T::Vector,
     coefficient: T::Vector,
-    new_data: T::Vector,
+    data_to_xor: T::Vector,
     reflected: bool,
     ops: &T,
 ) -> T::Vector
@@ -341,7 +341,7 @@ where
     };
 
     // Fold 16 bytes using width-specific method
-    W::fold_16(&mut temp_state, coefficient, new_data, ops);
+    W::fold_16(&mut temp_state, coefficient, data_to_xor, ops);
 
     temp_state.value
 }
