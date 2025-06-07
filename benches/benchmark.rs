@@ -100,6 +100,7 @@ fn bench_crc32(c: &mut Criterion) {
             let alg_suffix = algorithm_name_parts.next();
 
             group.throughput(Throughput::Bytes(*size as u64));
+            group.sample_size(1000);
 
             let bench_name = [alg_suffix.unwrap(), "(checksum)"].join(" ");
 
@@ -143,8 +144,7 @@ fn bench_crc64(c: &mut Criterion) {
             let alg_suffix = algorithm_name_parts.next();
 
             group.throughput(Throughput::Bytes(*size as u64));
-
-            group.measurement_time(Duration::from_secs(60));
+            group.sample_size(1000);
 
             let bench_name = [alg_suffix.unwrap(), "(checksum)"].join(" ");
 
