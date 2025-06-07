@@ -260,7 +260,7 @@ pub trait EnhancedCrcWidth: CrcWidth {
     unsafe fn fold_16<T: ArchOps>(
         state: &mut CrcState<T::Vector>,
         coefficient: T::Vector,
-        new_data: T::Vector,
+        data_to_xor: T::Vector,
         ops: &T,
     ) where
         T::Vector: Copy;

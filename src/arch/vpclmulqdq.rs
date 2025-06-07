@@ -38,12 +38,12 @@ impl Simd256 {
 
     #[inline]
     #[target_feature(enable = "avx2,avx512f,avx512vl,vpclmulqdq")]
-    unsafe fn fold_32(&self, coeff: &Self, new_data: &Self) -> Self {
+    unsafe fn fold_32(&self, coeff: &Self, data_to_xor: &Self) -> Self {
         // XOR3
         Self(_mm256_ternarylogic_epi64(
             _mm256_clmulepi64_epi128(self.0, coeff.0, 0x00),
             _mm256_clmulepi64_epi128(self.0, coeff.0, 0x11),
-            new_data.0,
+            data_to_xor.0,
             0x96,
         ))
     }

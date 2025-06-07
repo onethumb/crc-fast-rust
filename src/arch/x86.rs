@@ -244,7 +244,9 @@ impl ArchOps for X86Ops {
     ) -> Self::Vector {
         #[cfg(any(feature = "vpclmulqdq", feature = "avx512"))]
         if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl") {
-            return _mm_ternarylogic_epi64(a, b, c, 0x96);
+            return _mm_ternarylogic_epi64(
+                a, b, c, 0x96, // XOR3
+            );
         }
 
         // x86 doesn't have native XOR3 in SSE, use two XORs
