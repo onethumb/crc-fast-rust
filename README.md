@@ -297,14 +297,14 @@ AKA `crc32` in many, but not all, implementations.
 
 ### CRC-64/NVME
 
-| Arch    | Brand | CPU             | System                    | Target          | 1KiB (GiB/s) | 1MiB (GiB/s) |
-|:--------|:------|:----------------|:--------------------------|:----------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-48xl        | avx2_vpclmulqdq |        ~17.0 |        ~56.4 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx2_vpclmulqdq |        ~17.3 |        ~27.4 |
-| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon_pclmulqdq  |        ~16.3 |        ~16.3 |
-| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon_pclmulqdq  |        ~44.0 |        ~71.9 |
-| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon_pclmulqdq  |        ~40.3 |        ~72.3 | 
-| aarch64 | Apple | M2 Ultra        | Mac Studio (24 core)      | neon_pclmulqdq  |        ~39.3 |        ~65.0 |
+| Arch    | Brand | CPU             | System                    | Target            | 1KiB (GiB/s) | 1MiB (GiB/s) |
+|:--------|:------|:----------------|:--------------------------|:------------------|-------------:|-------------:|
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-48xl        | avx512_vpclmulqdq |        ~20.3 |        ~94.1 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512_vpclmulqdq |        ~18.3 |        ~53.9 |
+| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon_pclmulqdq    |        ~16.3 |        ~16.3 |
+| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon_pclmulqdq    |        ~44.0 |        ~71.9 |
+| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon_pclmulqdq    |        ~40.3 |        ~72.3 | 
+| aarch64 | Apple | M2 Ultra        | Mac Studio (24 core)      | neon_pclmulqdq    |        ~39.3 |        ~65.0 |
 
 ## Other CRC widths
 
