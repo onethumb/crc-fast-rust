@@ -6,7 +6,6 @@
 
 use crate::traits::ArchOps;
 use std::arch::aarch64::*;
-use std::arch::is_aarch64_feature_detected;
 
 #[derive(Debug, Copy, Clone)]
 pub struct AArch64Ops;
@@ -258,20 +257,27 @@ impl ArchOps for AArch64Ops {
     }
 
     #[inline]
-    #[cfg_attr(target_feature = "sha3", target_feature(enable = "neon,sha3"))]
-    #[cfg_attr(not(target_feature = "sha3"), target_feature(enable = "neon"))]
+    #[cfg(target_feature = "sha3")]
+    #[target_feature(enable = "neon,sha3")]
     unsafe fn xor3_vectors(
         &self,
         a: Self::Vector,
         b: Self::Vector,
         c: Self::Vector,
     ) -> Self::Vector {
-        if is_aarch64_feature_detected!("sha3") {
-            // Use native 3-way XOR instruction when available
-            return veor3q_u8(a, b, c);
-        }
+        veor3q_u8(a, b, c)
+    }
 
-        // Fall back to two XOR operations
+    #[inline]
+    #[cfg(not(target_feature = "sha3"))]
+    #[target_feature(enable = "neon")]
+    unsafe fn xor3_vectors(
+        &self,
+        a: Self::Vector,
+        b: Self::Vector,
+        c: Self::Vector,
+    ) -> Self::Vector {
+        // Fallback for when SHA3 is not available
         veorq_u8(veorq_u8(a, b), c)
     }
 }
