@@ -33,6 +33,15 @@ pub(crate) mod x86;
 /// # Safety
 /// May use native CPU features
 #[inline]
+#[cfg_attr(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+)]
+#[cfg_attr(
+    all(target_arch = "x86_64", feature = "vpclmulqdq"),
+    target_feature(enable = "avx2,vpclmulqdq,avx512f,avx512vl")
+)]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     #[cfg(target_arch = "aarch64")]
     {
