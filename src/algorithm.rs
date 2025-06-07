@@ -145,7 +145,9 @@ where
         }
 
         // try to use the enhanced SIMD implementation first, fall back to non-enhanced if necessary
-        if !ops.process_enhanced_simd_blocks::<W>(state, first, rest, &reflector, keys) {
+        if rest.is_empty()
+            || !ops.process_enhanced_simd_blocks::<W>(state, first, rest, &reflector, keys)
+        {
             process_simd_chunks::<T, W>(state, first, rest, &reflector, keys, ops);
         }
 
