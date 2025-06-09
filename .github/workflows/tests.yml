@@ -27,7 +27,7 @@ jobs:
       - name: Architecture check
         run: cargo run arch-check
       - name: Architecture check (Optimized)
-        run: cargo run --features=optimize_crc32_auto arch-check
+        run: cargo run arch-check
       - if: ${{ matrix.rust-toolchain != 'nightly' }}
         name: Format
         run: cargo fmt -- --check
@@ -36,8 +36,6 @@ jobs:
         run: cargo clippy
       - name: Test
         run: cargo test
-      - name: Test (Optimized)
-        run: cargo test --features=optimize_crc32_auto
 
   test-x86:
     name:  Test accelerated (x86)
@@ -61,8 +59,6 @@ jobs:
         run: cross check --target ${{ matrix.target }}
       - name: Test
         run: cross test --target ${{ matrix.target }}
-      - name: Test (Optimized)
-        run: cross test --features=optimize_crc32_auto --target ${{ matrix.target }}
 
   test-software:
     name: Test software fallback
@@ -86,5 +82,3 @@ jobs:
         run: cross check --target ${{ matrix.target }}
       - name: Test
         run: cross test --target ${{ matrix.target }}
-      - name: Test (Optimized)
-        run: cross test --features=optimize_crc32_auto --target ${{ matrix.target }}

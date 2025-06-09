@@ -30,9 +30,6 @@ criterion = "0.5"
 cbindgen = "0.28"
 bindgen = "0.70" # 0.70 is the last version that supports Rust 1.81 due to 'unsafe extern' blocks
 
-[build-dependencies]
-cc = { version = "1.2", features = ["parallel"] }
-
 # lto=true has a big improvement in performance
 [profile.release]
 lto = true
@@ -53,30 +50,12 @@ vpclmulqdq = []
 # enable AVX512 support in Rust for x86_64 using nightly toolchain builds
 avx512 = []
 
-# enable using fast-crc32 optimized C implementations for CRC-32/ISCSI and CRC-32/ISO-HDLC, automatically detected
-optimize_crc32_auto = []
-
-# the following features enable forcing custom optimized build features (rather than "auto" which attemps to pick the
-# best) for CRC-32/ISCSI and CRC-32/ISO-HDLC calculations, since architecture support and performance varies
-
-# aarch64 NEON options
-optimize_crc32_neon_eor3_v9s3x2e_s3 = []
-optimize_crc32_neon_v12e_v1 = []
-optimize_crc32_neon_v3s4x2e_v2 = []
-
-# blends eor3_v9s3x2e_s3 for "large" (>1KiB) payloads, and v12e_v1 for "small" ones, which tends to yield the best
-# results on modern aarch64 such as Graviton and Apple Silicon
-optimize_crc32_neon_blended = []
-
-# x86 SSE+ options
-# this will blend automagically for CRC-32/ISO-HDLC which tends to have poor hardware support, but typically great
-# support for CRC-32/ISCSI
-optimize_crc32_avx512_vpclmulqdq_v3x2 = []
-
-# non-blended alternatives
-optimize_crc32_avx512_v4s3x3 = []
-optimize_crc32_sse_v4s3x3 = []
-
-[lints.rust]
-# build-time feature enablement
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(optimized_crc32_iscsi)','cfg(optimized_crc32_iso_hdlc)' ] }
+# these features aren't in use, are deprecated, and will be removed in the next MAJOR version
+optimize_crc32_auto = [] # deprecated
+optimize_crc32_neon_eor3_v9s3x2e_s3 = [] # deprecated
+optimize_crc32_neon_v12e_v1 = [] # deprecated
+optimize_crc32_neon_v3s4x2e_v2 = [] # deprecated
+optimize_crc32_neon_blended = [] # deprecated
+optimize_crc32_avx512_vpclmulqdq_v3x2 = [] # deprecated
+optimize_crc32_avx512_v4s3x3 = [] # deprecated
+optimize_crc32_sse_v4s3x3 = [] # deprecated

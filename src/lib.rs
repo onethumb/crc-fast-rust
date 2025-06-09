@@ -60,8 +60,8 @@
 //! use crc_fast::{Digest, CrcAlgorithm::Crc32IsoHdlc};
 //!
 //! // for example/test purposes only, use your own file path
-//! let binding = env::current_dir().expect("missing working dir").join("crc-check.txt");
-//! let file_on_disk = binding.to_str().unwrap();
+//! let file_path = env::current_dir().expect("missing working dir").join("crc-check.txt");
+//! let file_on_disk = file_path.to_str().unwrap();
 //!
 //! // actual usage
 //! let mut digest = Digest::new(Crc32IsoHdlc);
@@ -97,8 +97,8 @@
 //! use crc_fast::{checksum_file, CrcAlgorithm::Crc32IsoHdlc};
 //!
 //! // for example/test purposes only, use your own file path
-//! let binding = env::current_dir().expect("missing working dir").join("crc-check.txt");
-//! let file_on_disk = binding.to_str().unwrap();
+//! let file_path = env::current_dir().expect("missing working dir").join("crc-check.txt");
+//! let file_on_disk = file_path.to_str().unwrap();
 //!
 //! let checksum = checksum_file(Crc32IsoHdlc, file_on_disk, None);
 //!
@@ -126,7 +126,6 @@ use std::io::{Read, Write};
 
 mod algorithm;
 mod arch;
-mod bindings;
 mod combine;
 mod consts;
 mod crc32;
@@ -440,32 +439,17 @@ pub fn checksum_combine(
 
 /// Returns the target used to calculate the CRC checksum for the specified algorithm.
 ///
+/// These strings are informational only, not stable, and shouldn't be relied on to match across
+/// versions.
+///
 /// # Examples
 ///```rust
 /// use crc_fast::{get_calculator_target, CrcAlgorithm::Crc32IsoHdlc};
 ///
 /// let target = get_calculator_target(Crc32IsoHdlc);
 /// ```
-pub fn get_calculator_target(algorithm: CrcAlgorithm) -> String {
-    match algorithm {
-        CrcAlgorithm::Crc32IsoHdlc => {
-            #[cfg(optimized_crc32_iso_hdlc)]
-            unsafe {
-                bindings::get_iso_hdlc_target()
-            }
-            #[cfg(not(optimized_crc32_iso_hdlc))]
-            arch::get_target()
-        }
-        CrcAlgorithm::Crc32Iscsi => {
-            #[cfg(optimized_crc32_iscsi)]
-            unsafe {
-                bindings::get_iscsi_target()
-            }
-            #[cfg(not(optimized_crc32_iscsi))]
-            arch::get_target()
-        }
-        _ => arch::get_target(),
-    }
+pub fn get_calculator_target(_algorithm: CrcAlgorithm) -> String {
+    arch::get_target()
 }
 
 /// Returns the calculator function and parameters for the specified CRC algorithm.
@@ -850,75 +834,6 @@ mod lib {
                 write(HEADER, expected).map_err(|error| error.to_string())?;
                 return Err(format!(
                     "{HEADER} is not up-to-date, commit the generated file and try again"
-                ));
-            }
-
-            Ok(())
-        }
-    }
-
-    /// Tests whether the CRC-32/ISO-HDLC bindings are up-to-date
-    #[test]
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
-    fn test_crc32_iso_hdlc_bindings() -> Result<(), String> {
-        build_bindgen("crc32_iso_hdlc", "src/bindings/crc32_iso_hdlc.rs")
-    }
-
-    /// Tests whether the CRC-32/ISCSI bindings are up-to-date
-    #[test]
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
-    fn test_crc32_iscsi_bindings() -> Result<(), String> {
-        build_bindgen("crc32_iscsi", "src/bindings/crc32_iscsi.rs")
-    }
-
-    fn build_bindgen(name: &str, bindings_path: &str) -> Result<(), String> {
-        // Getting the Rust cross compile toolchain working on x86 such that it builds correctly
-        // _and_ can validate the header output via bindgen is non-obvious. Since I doubt many
-        // people are actually doing development work on x86, as opposed to x86_64 or aarch64,
-        // I'm just going to skip the bindgen tests on x86. The important tests (do these
-        // CRC-32 variants actually work?) is covered by the other tests, this is just a
-        // development artifact test.
-
-        #[cfg(target_arch = "x86")]
-        {
-            eprintln!("Skipping test on x86 for {} to {}", name, bindings_path);
-
-            return Ok(());
-        }
-
-        // Skip this test on Windows, since CRLF vs LF is a PITA
-        #[cfg(target_os = "windows")]
-        {
-            // Skip this test on Windows, since CRLF vs LF is a PITA
-            eprintln!("Skipping test on Windows");
-
-            return Ok(());
-        }
-
-        #[cfg(not(any(target_arch = "x86", target_os = "windows")))]
-        {
-            let bindings = bindgen::Builder::default()
-                .header(format!("include/{name}.h"))
-                .allowlist_function("crc32_iscsi_impl")
-                .allowlist_function("get_iscsi_target")
-                .allowlist_var("ISCSI_TARGET")
-                .allowlist_function("crc32_iso_hdlc_impl")
-                .allowlist_function("get_iso_hdlc_target")
-                .allowlist_var("ISO_HDLC_TARGET")
-                .generate()
-                .expect("Unable to generate bindings");
-
-            let expected = bindings.to_string().into_bytes();
-
-            let actual = read(bindings_path).map_err(|error| error.to_string())?;
-
-            if expected != actual {
-                bindings
-                    .write_to_file(bindings_path)
-                    .expect("Couldn't write bindings to SRC!");
-
-                return Err(format!(
-                    "{bindings_path} is not up-to-date, commit the generated file and try again"
                 ));
             }
 
