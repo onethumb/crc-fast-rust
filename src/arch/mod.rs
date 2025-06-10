@@ -22,8 +22,8 @@ use aarch64::AArch64Ops;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 use x86::X86Ops;
 
-#[cfg(target_arch = "x86_64")]
-#[rustversion::since(1.89)]
+//#[rustversion::since(1.89)]
+#[cfg(all(target_arch = "x86_64", feature = "vpclmulqdq"))]
 use vpclmulqdq::Vpclmulqdq512Ops;
 
 mod aarch64;
@@ -49,25 +49,28 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
     }
 }
 
-#[rustversion::before(1.89)]
+//#[rustversion::before(1.89)]
 #[inline]
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(all(
+    not(feature = "vpclmulqdq"),
+    any(target_arch = "x86", target_arch = "x86_64")
+))]
 #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     update_x86_sse(state, bytes, params)
 }
 
-#[rustversion::since(1.89)]
+//#[rustversion::since(1.89)]
 #[inline]
-#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "vpclmulqdq", target_arch = "x86"))]
 #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     update_x86_sse(state, bytes, params)
 }
 
-#[rustversion::since(1.89)]
+//#[rustversion::since(1.89)]
 #[inline]
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "vpclmulqdq", target_arch = "x86_64"))]
 #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     use std::arch::is_x86_feature_detected;
@@ -114,7 +117,8 @@ unsafe fn update_x86_sse(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     }
 }
 
-#[rustversion::before(1.89)]
+//#[rustversion::before(1.89)]
+#[cfg(not(feature = "vpclmulqdq"))]
 pub fn get_target() -> String {
     #[cfg(target_arch = "aarch64")]
     {
@@ -133,7 +137,8 @@ pub fn get_target() -> String {
     return "software-fallback-tables".to_string();
 }
 
-#[rustversion::since(1.89)]
+//#[rustversion::since(1.89)]
+#[cfg(feature = "vpclmulqdq")]
 pub fn get_target() -> String {
     #[cfg(target_arch = "aarch64")]
     {
