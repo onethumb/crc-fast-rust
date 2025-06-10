@@ -63,6 +63,7 @@ pub fn crc32_iso_hdlc(crc: u32, data: &[u8]) -> u32 {
 }
 
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
 unsafe fn clmul_lo_eor3(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
     // Polynomial multiply low parts - convert u128 result to uint64x2_t
@@ -71,6 +72,7 @@ unsafe fn clmul_lo_eor3(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
 }
 
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
 unsafe fn clmul_hi_eor3(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
     // Polynomial multiply high parts - convert u128 result to uint64x2_t
@@ -79,6 +81,7 @@ unsafe fn clmul_hi_eor3(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
 }
 
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
 unsafe fn clmul_scalar(a: u32, b: u32) -> uint64x2_t {
     // Polynomial multiply scalars - convert u128 result to uint64x2_t
@@ -88,6 +91,7 @@ unsafe fn clmul_scalar(a: u32, b: u32) -> uint64x2_t {
 
 // x^n mod P, in log(n) time
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
 fn xnmodp_crc32_iscsi(mut n: u64) -> u32 {
     let mut stack = !1u64;
@@ -125,6 +129,7 @@ fn xnmodp_crc32_iscsi(mut n: u64) -> u32 {
 }
 
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
 unsafe fn crc_shift_iscsi(crc: u32, nbytes: usize) -> uint64x2_t {
     clmul_scalar(crc, xnmodp_crc32_iscsi((nbytes * 8 - 33) as u64))
@@ -132,6 +137,7 @@ unsafe fn crc_shift_iscsi(crc: u32, nbytes: usize) -> uint64x2_t {
 
 // x^n mod P, in log(n) time
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
 fn xnmodp_iso_hdlc(mut n: u64) -> u32 {
     let mut stack = !1u64;
@@ -169,6 +175,7 @@ fn xnmodp_iso_hdlc(mut n: u64) -> u32 {
 }
 
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
 unsafe fn crc_shift_iso_hdlc(crc: u32, nbytes: usize) -> uint64x2_t {
     clmul_scalar(crc, xnmodp_iso_hdlc((nbytes * 8 - 33) as u64))
@@ -179,6 +186,7 @@ unsafe fn crc_shift_iso_hdlc(crc: u32, nbytes: usize) -> uint64x2_t {
 ///
 /// ./generate -i neon_eor3 -p crc32c -a v9s3x2e_s3
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes,sha3")]
 unsafe fn crc32_iscsi_eor3_v9s3x2e_s3(mut crc0: u32, mut buf: *const u8, mut len: usize) -> u32 {
     // Align to 8-byte boundary
@@ -555,6 +563,7 @@ unsafe fn crc32_iscsi_v12e_v1(mut crc0: u32, mut buf: *const u8, mut len: usize)
 ///
 /// ./generate -i neon_eor3 -p crc32 -a v9s3x2e_s3
 #[inline]
+#[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes,sha3")]
 unsafe fn crc32_iso_hdlc_eor3_v9s3x2e_s3(mut crc0: u32, mut buf: *const u8, mut len: usize) -> u32 {
     // Align to 8-byte boundary
@@ -916,7 +925,6 @@ mod tests {
     use crate::test::consts::TEST_CHECK_STRING;
     use crc::{Crc, Table};
     use rand::{rng, Rng};
-    use std::arch::is_aarch64_feature_detected;
 
     const RUST_CRC32_ISO_HDLC: Crc<u32, Table<16>> =
         Crc::<u32, Table<16>>::new(&crc::CRC_32_ISO_HDLC);
@@ -985,6 +993,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_feature = "sha3")]
     fn crc32_iso_hdlc_random(len: usize) {
         let mut data = vec![0u8; len];
         rng().fill(&mut data[..]);
@@ -994,13 +1003,11 @@ mod tests {
         assert_eq!(crc32_iso_hdlc(0xffffffff, &data) ^ 0xffffffff, checksum);
 
         unsafe {
-            if is_aarch64_feature_detected!("sha3") {
-                assert_eq!(
-                    crc32_iso_hdlc_eor3_v9s3x2e_s3(0xffffffff, data.as_ptr(), data.len())
-                        ^ 0xffffffff,
-                    checksum
-                );
-            }
+            assert_eq!(
+                crc32_iso_hdlc_eor3_v9s3x2e_s3(0xffffffff, data.as_ptr(), data.len())
+                    ^ 0xffffffff,
+                checksum
+            );
 
             assert_eq!(
                 crc32_iso_hdlc_v12e_v1(0xffffffff, data.as_ptr(), data.len()) ^ 0xffffffff,
@@ -1009,6 +1016,24 @@ mod tests {
         }
     }
 
+    #[cfg(not(target_feature = "sha3"))]
+    fn crc32_iso_hdlc_random(len: usize) {
+        let mut data = vec![0u8; len];
+        rng().fill(&mut data[..]);
+
+        let checksum = RUST_CRC32_ISO_HDLC.checksum(&data);
+
+        assert_eq!(crc32_iso_hdlc(0xffffffff, &data) ^ 0xffffffff, checksum);
+
+        unsafe {
+            assert_eq!(
+                crc32_iso_hdlc_v12e_v1(0xffffffff, data.as_ptr(), data.len()) ^ 0xffffffff,
+                checksum
+            );
+        }
+    }
+
+    #[cfg(target_feature = "sha3")]
     fn crc32_iscsi_random(len: usize) {
         let mut data = vec![0u8; len];
         rng().fill(&mut data[..]);
@@ -1018,13 +1043,28 @@ mod tests {
         assert_eq!(crc32_iscsi(0xffffffff, &data) ^ 0xffffffff, checksum);
 
         unsafe {
-            if is_aarch64_feature_detected!("sha3") {
-                assert_eq!(
-                    crc32_iscsi_eor3_v9s3x2e_s3(0xffffffff, data.as_ptr(), data.len()) ^ 0xffffffff,
-                    checksum
-                );
-            }
+            assert_eq!(
+                crc32_iscsi_eor3_v9s3x2e_s3(0xffffffff, data.as_ptr(), data.len()) ^ 0xffffffff,
+                checksum
+            );
 
+            assert_eq!(
+                crc32_iscsi_v12e_v1(0xffffffff, data.as_ptr(), data.len()) ^ 0xffffffff,
+                checksum
+            );
+        }
+    }
+
+    #[cfg(not(target_feature = "sha3"))]
+    fn crc32_iscsi_random(len: usize) {
+        let mut data = vec![0u8; len];
+        rng().fill(&mut data[..]);
+
+        let checksum = RUST_CRC32_ISCSI.checksum(&data);
+
+        assert_eq!(crc32_iscsi(0xffffffff, &data) ^ 0xffffffff, checksum);
+
+        unsafe {
             assert_eq!(
                 crc32_iscsi_v12e_v1(0xffffffff, data.as_ptr(), data.len()) ^ 0xffffffff,
                 checksum

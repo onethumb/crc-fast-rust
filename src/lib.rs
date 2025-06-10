@@ -109,7 +109,10 @@ use crate::crc32::consts::{
     CRC32_AIXM, CRC32_AUTOSAR, CRC32_BASE91_D, CRC32_BZIP2, CRC32_CD_ROM_EDC, CRC32_CKSUM,
     CRC32_ISCSI, CRC32_ISO_HDLC, CRC32_JAMCRC, CRC32_MEF, CRC32_MPEG_2, CRC32_XFER,
 };
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 use crate::crc32::fusion;
+
 use crate::crc64::consts::{
     CRC64_ECMA_182, CRC64_GO_ISO, CRC64_MS, CRC64_NVME, CRC64_REDIS, CRC64_WE, CRC64_XZ,
 };
@@ -480,7 +483,12 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
 #[inline(always)]
 fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
     // both aarch64 and x86 have native CRC-32/ISCSI support, so we can use fusion
-    fusion::crc32_iscsi(state as u32, data) as u64
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    return fusion::crc32_iscsi(state as u32, data) as u64;
+
+    #[cfg(all(not(target_arch = "aarch64"), not(target_arch = "x86_64")))]
+    // fallback to traditional calculation if not aarch64 or x86_64
+    Calculator::calculate(state, data, _params)
 }
 
 /// Calculates the CRC-32/ISO-HDLC ("crc32" in many, but not all, implementations) checksum.
