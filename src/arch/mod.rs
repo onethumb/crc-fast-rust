@@ -158,6 +158,7 @@ mod tests {
     use crate::crc64::consts::CRC64_NVME;
     use crate::test::consts::{TEST_256_BYTES_STRING, TEST_ALL_CONFIGS, TEST_CHECK_STRING};
     use crate::test::create_aligned_data;
+    use crate::test::enums::AnyCrcTestConfig;
     use rand::{rng, Rng};
 
     #[test]
@@ -327,100 +328,56 @@ mod tests {
 
     #[test]
     fn test_small_lengths_all() {
-        let mut rng = rng();
-
         // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {
             // Test each length from 0 to 255
             for len in 0..=255 {
-                // Generate random data for this length
-                let mut data = vec![0u8; len];
-                rng.fill(&mut data[..]);
-
-                // Calculate expected CRC using the reference implementation
-                let expected = config.checksum_with_reference(&data);
-
-                // direct update() call, which needs XOROUT applied
-                let actual = unsafe {
-                    update(config.get_init(), &data, *config.get_params()) ^ config.get_xorout()
-                };
-
-                assert_eq!(
-                    actual,
-                    expected,
-                    "\nFailed for {} with length {}\nGot: {:016x}\nExpected: {:016x}",
-                    config.get_name(),
-                    len,
-                    actual,
-                    expected
-                );
+                test_length(len, config);
             }
         }
     }
 
     #[test]
     fn test_medium_lengths() {
-        let mut rng = rng();
-
         // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {
             // Test each length from 256 to 1024, which should fold and include handling remainders
             for len in 256..=1024 {
-                // Generate random data for this length
-                let mut data = vec![0u8; len];
-                rng.fill(&mut data[..]);
-
-                // Calculate expected CRC using the reference implementation
-                let expected = config.checksum_with_reference(&data);
-
-                // direct update() call, which needs XOROUT applied
-                let actual = unsafe {
-                    update(config.get_init(), &data, *config.get_params()) ^ config.get_xorout()
-                };
-
-                assert_eq!(
-                    actual,
-                    expected,
-                    "\nFailed for {} with length {}\nGot: {:016x}\nExpected: {:016x}",
-                    config.get_name(),
-                    len,
-                    actual,
-                    expected
-                );
+                test_length(len, config);
             }
         }
     }
 
     #[test]
     fn test_large_lengths() {
-        let mut rng = rng();
-
         // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {
             // Test ~1 MiB just before, at, and just after the folding boundaries
             for len in 1048575..=1048577 {
-                // Generate random data for this length
-                let mut data = vec![0u8; len];
-                rng.fill(&mut data[..]);
-
-                // Calculate expected CRC using the reference implementation
-                let expected = config.checksum_with_reference(&data);
-
-                // direct update() call, which needs XOROUT applied
-                let actual = unsafe {
-                    update(config.get_init(), &data, *config.get_params()) ^ config.get_xorout()
-                };
-
-                assert_eq!(
-                    actual,
-                    expected,
-                    "\nFailed for {} with length {}\nGot: {:016x}\nExpected: {:016x}",
-                    config.get_name(),
-                    len,
-                    actual,
-                    expected
-                );
+                test_length(len, config);
             }
         }
+    }
+
+    fn test_length(length: usize, config: &AnyCrcTestConfig) {
+        let mut data = vec![0u8; length];
+        rng().fill(&mut data[..]);
+
+        // Calculate expected CRC using the reference implementation
+        let expected = config.checksum_with_reference(&data);
+
+        // direct update() call, which needs XOROUT applied
+        let actual =
+            unsafe { update(config.get_init(), &data, *config.get_params()) ^ config.get_xorout() };
+
+        assert_eq!(
+            actual,
+            expected,
+            "\nFailed for {} with length {}\nGot: {:016x}\nExpected: {:016x}",
+            config.get_name(),
+            length,
+            actual,
+            expected
+        );
     }
 }

@@ -373,8 +373,8 @@ pub fn checksum(algorithm: CrcAlgorithm, buf: &[u8]) -> u64 {
 /// use crc_fast::{checksum_file, CrcAlgorithm::Crc32IsoHdlc};
 ///
 /// // for example/test purposes only, use your own file path
-/// let binding = env::current_dir().expect("missing working dir").join("crc-check.txt");
-/// let file_on_disk = binding.to_str().unwrap();
+/// let file_path = env::current_dir().expect("missing working dir").join("crc-check.txt");
+/// let file_on_disk = file_path.to_str().unwrap();
 ///
 /// let checksum = checksum_file(Crc32IsoHdlc, file_on_disk, None);
 ///
@@ -547,68 +547,52 @@ mod lib {
 
     #[test]
     fn test_small_all_lengths() {
-        let mut rng = rng();
-
-        // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {
             // Test each length from 1 to 255
             for len in 1..=255 {
-                // Generate random data for this length
-                let mut data = vec![0u8; len];
-                rng.fill(&mut data[..]);
-
-                // Calculate expected CRC using the reference implementation
-                let expected = config.checksum_with_reference(&data);
-
-                let result = checksum(config.get_algorithm(), &data);
-
-                assert_eq!(result, expected);
+                test_length(len, config);
             }
         }
     }
 
     #[test]
     fn test_medium_lengths() {
-        let mut rng = rng();
-
-        // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {
             // Test each length from 256 to 1024, which should fold and include handling remainders
             for len in 256..=1024 {
-                // Generate random data for this length
-                let mut data = vec![0u8; len];
-                rng.fill(&mut data[..]);
-
-                // Calculate expected CRC using the reference implementation
-                let expected = config.checksum_with_reference(&data);
-
-                let result = checksum(config.get_algorithm(), &data);
-
-                assert_eq!(result, expected);
+                test_length(len, config);
             }
         }
     }
 
     #[test]
     fn test_large_lengths() {
-        let mut rng = rng();
-
-        // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {
             // Test 1 MiB just before, at, and just after the folding boundaries
             for len in 1048575..1048577 {
-                // Generate random data for this length
-                let mut data = vec![0u8; len];
-                rng.fill(&mut data[..]);
-
-                // Calculate expected CRC using the reference implementation
-                let expected = config.checksum_with_reference(&data);
-
-                let result = checksum(config.get_algorithm(), &data);
-
-                assert_eq!(result, expected);
+                test_length(len, config);
             }
         }
+    }
+
+    fn test_length(length: usize, config: &AnyCrcTestConfig) {
+        let mut data = vec![0u8; length];
+        rng().fill(&mut data[..]);
+
+        // Calculate expected CRC using the reference implementation
+        let expected = config.checksum_with_reference(&data);
+
+        let result = checksum(config.get_algorithm(), &data);
+
+        assert_eq!(
+            result,
+            expected,
+            "Failed for algorithm: {:?}, length: {}, expected: {:#x}, got: {:#x}",
+            config.get_algorithm(),
+            length,
+            expected,
+            result
+        );
     }
 
     #[test]
@@ -759,57 +743,53 @@ mod lib {
             return Ok(());
         }
 
-        #[cfg(not(target_os = "windows"))]
-        {
-            const HEADER: &str = "libcrc_fast.h";
+        const HEADER: &str = "libcrc_fast.h";
 
-            let crate_dir =
-                std::env::var("CARGO_MANIFEST_DIR").map_err(|error| error.to_string())?;
+        let crate_dir = std::env::var("CARGO_MANIFEST_DIR").map_err(|error| error.to_string())?;
 
-            let mut expected = Vec::new();
-            cbindgen::Builder::new()
-                .with_crate(crate_dir)
-                .with_include_guard("CRC_FAST_H")
-                .with_header("/* crc_fast library C/C++ API - Copyright 2025 Don MacAskill */\n/* This header is auto-generated. Do not edit directly. */\n")
-                // exclude internal implementation functions
-                .exclude_item("crc32_iscsi_impl")
-                .exclude_item("crc32_iso_hdlc_impl")
-                .exclude_item("get_iscsi_target")
-                .exclude_item("get_iso_hdlc_target")
-                .exclude_item("ISO_HDLC_TARGET")
-                .exclude_item("ISCSI_TARGET")
-                .exclude_item("CrcParams")
-                .rename_item("Digest", "CrcFastDigest")
-                .with_style(Both)
-                // generate C header
-                .with_language(C)
-                // with C++ compatibility
-                .with_cpp_compat(true)
-                .generate()
-                .map_err(|error| error.to_string())?
-                .write(&mut expected);
+        let mut expected = Vec::new();
+        cbindgen::Builder::new()
+            .with_crate(crate_dir)
+            .with_include_guard("CRC_FAST_H")
+            .with_header("/* crc_fast library C/C++ API - Copyright 2025 Don MacAskill */\n/* This header is auto-generated. Do not edit directly. */\n")
+            // exclude internal implementation functions
+            .exclude_item("crc32_iscsi_impl")
+            .exclude_item("crc32_iso_hdlc_impl")
+            .exclude_item("get_iscsi_target")
+            .exclude_item("get_iso_hdlc_target")
+            .exclude_item("ISO_HDLC_TARGET")
+            .exclude_item("ISCSI_TARGET")
+            .exclude_item("CrcParams")
+            .rename_item("Digest", "CrcFastDigest")
+            .with_style(Both)
+            // generate C header
+            .with_language(C)
+            // with C++ compatibility
+            .with_cpp_compat(true)
+            .generate()
+            .map_err(|error| error.to_string())?
+            .write(&mut expected);
 
-            // Convert the expected bytes to string for pattern replacement, since cbindgen
-            // generates an annoying amount of empty contiguous newlines
-            let header_content = String::from_utf8(expected).map_err(|error| error.to_string())?;
+        // Convert the expected bytes to string for pattern replacement, since cbindgen
+        // generates an annoying amount of empty contiguous newlines
+        let header_content = String::from_utf8(expected).map_err(|error| error.to_string())?;
 
-            // Replace excessive newlines (3 or more consecutive newlines) with 2 newlines
-            let regex = regex::Regex::new(r"\n{3,}").map_err(|error| error.to_string())?;
-            let cleaned_content = regex.replace_all(&header_content, "\n\n").to_string();
+        // Replace excessive newlines (3 or more consecutive newlines) with 2 newlines
+        let regex = regex::Regex::new(r"\n{3,}").map_err(|error| error.to_string())?;
+        let cleaned_content = regex.replace_all(&header_content, "\n\n").to_string();
 
-            // Convert back to bytes
-            expected = cleaned_content.into_bytes();
+        // Convert back to bytes
+        expected = cleaned_content.into_bytes();
 
-            let actual = read(HEADER).map_err(|error| error.to_string())?;
+        let actual = read(HEADER).map_err(|error| error.to_string())?;
 
-            if expected != actual {
-                write(HEADER, expected).map_err(|error| error.to_string())?;
-                return Err(format!(
-                    "{HEADER} is not up-to-date, commit the generated file and try again"
-                ));
-            }
-
-            Ok(())
+        if expected != actual {
+            write(HEADER, expected).map_err(|error| error.to_string())?;
+            return Err(format!(
+                "{HEADER} is not up-to-date, commit the generated file and try again"
+            ));
         }
+
+        Ok(())
     }
 }

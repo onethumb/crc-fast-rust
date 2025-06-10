@@ -5,8 +5,8 @@
 #![cfg(test)]
 #![allow(dead_code)]
 
-pub mod consts;
-mod enums;
+pub(crate) mod consts;
+pub(crate) mod enums;
 mod structs;
 
 /// Creates a new aligned data vector from the input slice for testing.
