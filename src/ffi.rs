@@ -7,12 +7,12 @@
 
 #![cfg(any(target_arch = "aarch64", target_arch = "x86_64", target_arch = "x86"))]
 
+use crate::structs::CrcParams;
 use crate::CrcAlgorithm;
 use crate::{get_calculator_target, Digest};
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
-use crate::structs::CrcParams;
 
 /// A handle to the Digest object
 #[repr(C)]
@@ -111,7 +111,9 @@ pub extern "C" fn crc_fast_digest_new(algorithm: CrcFastAlgorithm) -> *mut CrcFa
 
 /// Creates a new Digest to compute CRC checksums using custom parameters
 #[no_mangle]
-pub extern "C" fn crc_fast_digest_new_with_params(params: CrcFastParams) -> *mut CrcFastDigestHandle {
+pub extern "C" fn crc_fast_digest_new_with_params(
+    params: CrcFastParams,
+) -> *mut CrcFastDigestHandle {
     let digest = Box::new(Digest::new_with_params(params.into()));
     let handle = Box::new(CrcFastDigestHandle(Box::into_raw(digest)));
     Box::into_raw(handle)
@@ -293,7 +295,7 @@ pub extern "C" fn crc_fast_checksum_file_with_params(
             &convert_to_string(path_ptr, path_len),
             None,
         )
-            .unwrap_or(0) // Return 0 on error instead of panicking
+        .unwrap_or(0) // Return 0 on error instead of panicking
     }
 }
 

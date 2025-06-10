@@ -623,22 +623,13 @@ mod lib {
     #[test]
     fn test_digest_updates_check_with_custom_params() {
         // CRC-32 reflected
-        check_digest(
-            Digest::new_with_params(CRC32_ISCSI),
-            CRC32_ISCSI.check,
-        );
+        check_digest(Digest::new_with_params(CRC32_ISCSI), CRC32_ISCSI.check);
 
         // CRC-32 forward
-        check_digest(
-            Digest::new_with_params(CRC32_BZIP2),
-            CRC32_BZIP2.check,
-        );
+        check_digest(Digest::new_with_params(CRC32_BZIP2), CRC32_BZIP2.check);
 
         // CRC-64 reflected
-        check_digest(
-            Digest::new_with_params(CRC64_NVME),
-            CRC64_NVME.check,
-        );
+        check_digest(Digest::new_with_params(CRC64_NVME), CRC64_NVME.check);
 
         // CRC-64 forward
         check_digest(
@@ -651,10 +642,7 @@ mod lib {
         digest.update(b"123");
         digest.update(b"456");
         digest.update(b"789");
-        assert_eq!(
-            digest.finalize(),
-            check,
-        );
+        assert_eq!(digest.finalize(), check,);
     }
 
     #[test]
@@ -762,32 +750,16 @@ mod lib {
         }
 
         // CRC-32 reflected
-        check_file(
-            CRC32_ISCSI,
-            test_file_path,
-            CRC32_ISCSI.check,
-        );
+        check_file(CRC32_ISCSI, test_file_path, CRC32_ISCSI.check);
 
         // CRC-32 forward
-        check_file(
-            CRC32_BZIP2,
-            test_file_path,
-            CRC32_BZIP2.check,
-        );
+        check_file(CRC32_BZIP2, test_file_path, CRC32_BZIP2.check);
 
         // CRC-64 reflected
-        check_file(
-            CRC64_NVME,
-            test_file_path,
-            CRC64_NVME.check,
-        );
+        check_file(CRC64_NVME, test_file_path, CRC64_NVME.check);
 
         // CRC-64 forward
-        check_file(
-            CRC64_ECMA_182,
-            test_file_path,
-            CRC64_ECMA_182.check,
-        );
+        check_file(CRC64_ECMA_182, test_file_path, CRC64_ECMA_182.check);
 
         std::fs::remove_file(test_file_path).unwrap();
     }
