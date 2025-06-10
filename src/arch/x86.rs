@@ -227,31 +227,30 @@ impl ArchOps for X86Ops {
         _mm_clmulepi64_si128(a, b, 0x11)
     }
 
+    #[rustversion::since(1.89)]
     #[inline]
-    #[cfg(any(feature = "vpclmulqdq", feature = "avx512"))]
-    #[target_feature(enable = "avx512f,avx512vl")]
     unsafe fn xor3_vectors(
         &self,
         a: Self::Vector,
         b: Self::Vector,
         c: Self::Vector,
     ) -> Self::Vector {
-        _mm_ternarylogic_epi64(
-            a, b, c, 0x96, // XOR3
-        )
+        if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl") {
+            return self.xor3_vectors_avx512(a, b, c);
+        }
+
+        self.xor3_vectors_sse(a, b, c)
     }
 
+    #[rustversion::before(1.89)]
     #[inline]
-    #[cfg(not(any(feature = "vpclmulqdq", feature = "avx512")))]
-    #[target_feature(enable = "sse2,sse4.1")]
     unsafe fn xor3_vectors(
         &self,
         a: Self::Vector,
         b: Self::Vector,
         c: Self::Vector,
     ) -> Self::Vector {
-        // x86 doesn't have native XOR3 in SSE, use two XORs
-        _mm_xor_si128(_mm_xor_si128(a, b), c)
+        self.xor3_vectors_sse(a, b, c)
     }
 }
 
@@ -316,5 +315,21 @@ impl X86Ops {
             let hi = _mm_cvtsi128_si32(_mm_srli_si128(v, 12)) as u32 as u64;
             lo | (hi << 32)
         }
+    }
+
+    #[rustversion::since(1.89)]
+    #[inline]
+    #[target_feature(enable = "avx512f,avx512vl")]
+    unsafe fn xor3_vectors_avx512(&self, a: __m128i, b: __m128i, c: __m128i) -> __m128i {
+        _mm_ternarylogic_epi64(
+            a, b, c, 0x96, // XOR3
+        )
+    }
+
+    #[inline]
+    #[target_feature(enable = "sse2,sse4.1")]
+    unsafe fn xor3_vectors_sse(&self, a: __m128i, b: __m128i, c: __m128i) -> __m128i {
+        // x86 doesn't have native XOR3 in SSE, use two XORs
+        _mm_xor_si128(_mm_xor_si128(a, b), c)
     }
 }

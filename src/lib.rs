@@ -105,12 +105,6 @@
 //! assert_eq!(checksum.unwrap(), 0xcbf43926);
 //! ```
 
-// if VPCLMULQDQ or AVX512 is enabled, enable extra AVX512 features
-#![cfg_attr(
-    any(feature = "vpclmulqdq", feature = "avx512"),
-    feature(stdarch_x86_avx512)
-)]
-
 use crate::crc32::consts::{
     CRC32_AIXM, CRC32_AUTOSAR, CRC32_BASE91_D, CRC32_BZIP2, CRC32_CD_ROM_EDC, CRC32_CKSUM,
     CRC32_ISCSI, CRC32_ISO_HDLC, CRC32_JAMCRC, CRC32_MEF, CRC32_MPEG_2, CRC32_XFER,

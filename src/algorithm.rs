@@ -27,10 +27,6 @@ use crate::{crc32, crc64};
     any(target_arch = "x86", target_arch = "x86_64"),
     target_feature(enable = "sse2,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(
-    all(target_arch = "x86_64", feature = "vpclmulqdq"),
-    target_feature(enable = "avx2,vpclmulqdq,avx512f,avx512vl")
-)]
 #[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
 pub unsafe fn update<T: ArchOps, W: EnhancedCrcWidth>(
     state: W::Value,
@@ -119,10 +115,6 @@ where
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
     target_feature(enable = "sse2,sse4.1,pclmulqdq")
-)]
-#[cfg_attr(
-    all(target_arch = "x86_64", feature = "vpclmulqdq"),
-    target_feature(enable = "avx2,vpclmulqdq,avx512f,avx512vl")
 )]
 #[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
 unsafe fn process_large_aligned<T: ArchOps, W: EnhancedCrcWidth>(
