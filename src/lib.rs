@@ -615,7 +615,6 @@ mod lib {
     #[test]
     fn test_digest_updates_check() {
         for config in TEST_ALL_CONFIGS {
-            let mut digest = Digest::new(config.get_algorithm());
             check_digest(Digest::new(config.get_algorithm()), config.get_check());
         }
     }
