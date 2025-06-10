@@ -115,6 +115,7 @@ use crate::crc32::consts::{
     CRC32_AIXM, CRC32_AUTOSAR, CRC32_BASE91_D, CRC32_BZIP2, CRC32_CD_ROM_EDC, CRC32_CKSUM,
     CRC32_ISCSI, CRC32_ISO_HDLC, CRC32_JAMCRC, CRC32_MEF, CRC32_MPEG_2, CRC32_XFER,
 };
+use crate::crc32::fusion;
 use crate::crc64::consts::{
     CRC64_ECMA_182, CRC64_GO_ISO, CRC64_MS, CRC64_NVME, CRC64_REDIS, CRC64_WE, CRC64_XZ,
 };
@@ -480,53 +481,29 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
 
 /// Calculates the CRC-32/ISCSI ("crc32c" in many, but not all, implementations) checksum.
 ///
-/// By default, uses an external optimized C implementation, but can be switched to an internal
-/// SIMD-only implementation by using the `internal_simd_only` feature flag.
-///
-/// The external optimized implementation is also tunable via feature flags.
+/// Because both aarch64 and x86 have native hardware support for CRC-32/ISCSI, we can use
+/// fusion techniques to accelerate the calculation beyond what SIMD can do alone.
 #[inline(always)]
-fn crc32_iscsi_calculator(state: u64, data: &[u8], params: CrcParams) -> u64 {
-    #[cfg(optimized_crc32_iscsi)]
-    {
-        bindings::crc32_iscsi(state, data, params)
-    }
-
-    #[cfg(not(optimized_crc32_iscsi))]
-    {
-        Calculator::calculate(state, data, params)
-    }
+fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
+    // both aarch64 and x86 have native CRC-32/ISCSI support, so we can use fusion
+    fusion::crc32_iscsi(state as u32, data) as u64
 }
 
 /// Calculates the CRC-32/ISO-HDLC ("crc32" in many, but not all, implementations) checksum.
 ///
-/// By default, uses an external optimized C implementation, but can be switched to an internal
-/// SIMD-only implementation by using the `internal_simd_only` feature flag.
-///
-/// The external optimized implementation is also tunable via feature flags.#[inline(always)]
-fn crc32_iso_hdlc_calculator(state: u64, data: &[u8], params: CrcParams) -> u64 {
-    #[cfg(optimized_crc32_iso_hdlc)]
-    {
-        // Call the FFI function for CRC-32/ISO-HDLC for large (>1KiB) data payloads
-        #[cfg(target_arch = "x86_64")]
-        {
-            if data.len() > 1024 && std::arch::is_x86_feature_detected!("vpclmulqdq") {
-                return bindings::crc32_iso_hdlc(state, data, params);
-            }
+/// Because aarch64 has native hardware support for CRC-32/ISO-HDLC, we can use fusion techniques
+/// to accelerate the calculation beyond what SIMD can do alone. x86 does not have native support,
+/// so we use the traditional calculation.
+#[inline(always)]
+fn crc32_iso_hdlc_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
+    // aarch64 CPUs have native CRC-32/ISO-HDLC support, so we can use the fusion implementation
+    #[cfg(target_arch = "aarch64")]
+    return fusion::crc32_iso_hdlc(state as u32, data) as u64;
 
-            // our internal SIMD implementation for small (<1KiB) data payloads is faster,
-            // only for CRC-32/ISO_HDLC on non-VPCLMULQDQ platforms
-            Calculator::calculate(state, data, params)
-        }
-
-        #[cfg(not(target_arch = "x86_64"))]
-        // Call the FFI function for CRC-32/ISO-HDLC for all payloads non-x86_64
-        return bindings::crc32_iso_hdlc(state, data, params);
-    }
-
-    #[cfg(not(optimized_crc32_iso_hdlc))]
-    {
-        Calculator::calculate(state, data, params)
-    }
+    // x86 CPUs don't have native CRC-32/ISO-HDLC support, so there's no fusion to be had, use
+    // traditional calculation
+    #[cfg(not(target_arch = "aarch64"))]
+    Calculator::calculate(state, data, _params)
 }
 
 #[cfg(test)]
@@ -535,6 +512,7 @@ mod lib {
 
     use super::*;
     use crate::test::consts::{TEST_ALL_CONFIGS, TEST_CHECK_STRING};
+    use crate::test::enums::AnyCrcTestConfig;
     use cbindgen::Language::{Cxx, C};
     use cbindgen::Style::Both;
     use rand::{rng, Rng};
