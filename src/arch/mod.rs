@@ -70,7 +70,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     use std::arch::is_x86_feature_detected;
 
-    if bytes.len() >= 256 
+    if bytes.len() >= 256
         && is_x86_feature_detected!("vpclmulqdq")
         && is_x86_feature_detected!("avx512f")
         && is_x86_feature_detected!("avx512vl")
