@@ -93,7 +93,7 @@ unsafe fn clmul_scalar(a: u32, b: u32) -> uint64x2_t {
 #[inline]
 #[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
-fn xnmodp_crc32_iscsi(mut n: u64) -> u32 {
+unsafe fn xnmodp_crc32_iscsi(mut n: u64) -> u32 {
     let mut stack = !1u64;
     let mut acc: u32;
     let mut low: u32;
@@ -139,7 +139,7 @@ unsafe fn crc_shift_iscsi(crc: u32, nbytes: usize) -> uint64x2_t {
 #[inline]
 #[cfg(target_feature = "sha3")]
 #[target_feature(enable = "neon,aes")]
-fn xnmodp_iso_hdlc(mut n: u64) -> u32 {
+unsafe fn xnmodp_iso_hdlc(mut n: u64) -> u32 {
     let mut stack = !1u64;
     let mut acc: u32;
     let mut low: u32;
