@@ -1004,8 +1004,7 @@ mod tests {
 
         unsafe {
             assert_eq!(
-                crc32_iso_hdlc_eor3_v9s3x2e_s3(0xffffffff, data.as_ptr(), data.len())
-                    ^ 0xffffffff,
+                crc32_iso_hdlc_eor3_v9s3x2e_s3(0xffffffff, data.as_ptr(), data.len()) ^ 0xffffffff,
                 checksum
             );
 
