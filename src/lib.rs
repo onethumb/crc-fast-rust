@@ -110,7 +110,7 @@ use crate::crc32::consts::{
     CRC32_ISCSI, CRC32_ISO_HDLC, CRC32_JAMCRC, CRC32_MEF, CRC32_MPEG_2, CRC32_XFER,
 };
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 use crate::crc32::fusion;
 
 use crate::crc64::consts::{

@@ -70,7 +70,11 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     use std::arch::is_x86_feature_detected;
 
-    if bytes.len() >= 256 && is_x86_feature_detected!("vpclmulqdq") {
+    if bytes.len() >= 256 
+        && is_x86_feature_detected!("vpclmulqdq")
+        && is_x86_feature_detected!("avx512f")
+        && is_x86_feature_detected!("avx512vl")
+    {
         let ops = Vpclmulqdq512Ops::new();
 
         return match params.width {
@@ -134,7 +138,10 @@ pub fn get_target() -> String {
 
     #[cfg(target_arch = "x86_64")]
     {
-        if is_x86_feature_detected!("vpclmulqdq") {
+        if is_x86_feature_detected!("vpclmulqdq")
+            && is_x86_feature_detected!("avx512f")
+            && is_x86_feature_detected!("avx512vl")
+        {
             return "x86_64-avx512-vpclmulqdq".to_string();
         }
 
