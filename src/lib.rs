@@ -54,7 +54,7 @@
 //! Implements the [std::io::Write](https://doc.rust-lang.org/std/io/trait.Write.html) trait for
 //! easier integration with existing code.
 //!
-//! ```no_run
+//! ```rust
 //! use std::env;
 //! use std::fs::File;
 //! use crc_fast::{Digest, CrcAlgorithm::Crc32IsoHdlc};
@@ -261,6 +261,19 @@ impl Digest {
         }
     }
 
+    /// Creates a new `Digest` instance with custom parameters.
+    #[inline(always)]
+    pub fn new_with_params(params: CrcParams) -> Self {
+        let calculator = Calculator::calculate as CalculatorFn;
+
+        Self {
+            state: params.init,
+            amount: 0,
+            params,
+            calculator,
+        }
+    }
+
     /// Updates the CRC state with the given data.
     #[inline(always)]
     pub fn update(&mut self, data: &[u8]) {
@@ -361,6 +374,13 @@ pub fn checksum(algorithm: CrcAlgorithm, buf: &[u8]) -> u64 {
     calculator(params.init, buf, params) ^ params.xorout
 }
 
+/// Computes the CRC checksum for the given data using the custom specified parameters.
+pub fn checksum_with_params(params: CrcParams, buf: &[u8]) -> u64 {
+    let calculator = Calculator::calculate as CalculatorFn;
+
+    calculator(params.init, buf, params) ^ params.xorout
+}
+
 /// Computes the CRC checksum for the given file using the specified algorithm.
 ///
 /// Appears to be much faster (~2X) than using Writer and io::*, at least on Apple M2 Ultra
@@ -371,7 +391,7 @@ pub fn checksum(algorithm: CrcAlgorithm, buf: &[u8]) -> u64 {
 ///
 /// # Examples
 /// ### checksum_file
-///```no_run
+///```rust
 /// use std::env;
 /// use crc_fast::{checksum_file, CrcAlgorithm::Crc32IsoHdlc};
 ///
@@ -389,7 +409,32 @@ pub fn checksum_file(
     path: &str,
     chunk_size: Option<usize>,
 ) -> Result<u64, std::io::Error> {
-    let mut digest = Digest::new(algorithm);
+    checksum_file_with_digest(Digest::new(algorithm), path, chunk_size)
+}
+
+/// Computes the CRC checksum for the given file using the custom specified parameters.
+///
+/// # Errors
+///
+/// This function will return an error if the file cannot be read.
+pub fn checksum_file_with_params(
+    params: CrcParams,
+    path: &str,
+    chunk_size: Option<usize>,
+) -> Result<u64, std::io::Error> {
+    checksum_file_with_digest(Digest::new_with_params(params), path, chunk_size)
+}
+
+/// Computes the CRC checksum for the given file using the specified Digest.
+///
+/// # Errors
+///
+/// This function will return an error if the file cannot be read.
+fn checksum_file_with_digest(
+    mut digest: Digest,
+    path: &str,
+    chunk_size: Option<usize>,
+) -> Result<u64, std::io::Error> {
     let mut file = File::open(path)?;
 
     // 512KiB KiB was fastest in my benchmarks on an Apple M2 Ultra
@@ -541,16 +586,75 @@ mod lib {
     }
 
     #[test]
+    fn test_checksum_with_custom_params() {
+        // CRC-32 reflected
+        assert_eq!(
+            checksum_with_params(CRC32_ISCSI, TEST_CHECK_STRING),
+            CRC32_ISCSI.check,
+        );
+
+        // CRC-32 forward
+        assert_eq!(
+            checksum_with_params(CRC32_BZIP2, TEST_CHECK_STRING),
+            CRC32_BZIP2.check,
+        );
+
+        // CRC-64 reflected
+        assert_eq!(
+            checksum_with_params(CRC64_NVME, TEST_CHECK_STRING),
+            CRC64_NVME.check,
+        );
+
+        // CRC-64 forward
+        assert_eq!(
+            checksum_with_params(CRC64_ECMA_182, TEST_CHECK_STRING),
+            CRC64_ECMA_182.check,
+        );
+    }
+
+    #[test]
     fn test_digest_updates_check() {
         for config in TEST_ALL_CONFIGS {
             let mut digest = Digest::new(config.get_algorithm());
-            digest.update(b"123");
-            digest.update(b"456");
-            digest.update(b"789");
-            let result = digest.finalize();
-
-            assert_eq!(result, config.get_check());
+            check_digest(Digest::new(config.get_algorithm()), config.get_check());
         }
+    }
+
+    #[test]
+    fn test_digest_updates_check_with_custom_params() {
+        // CRC-32 reflected
+        check_digest(
+            Digest::new_with_params(CRC32_ISCSI),
+            CRC32_ISCSI.check,
+        );
+
+        // CRC-32 forward
+        check_digest(
+            Digest::new_with_params(CRC32_BZIP2),
+            CRC32_BZIP2.check,
+        );
+
+        // CRC-64 reflected
+        check_digest(
+            Digest::new_with_params(CRC64_NVME),
+            CRC64_NVME.check,
+        );
+
+        // CRC-64 forward
+        check_digest(
+            Digest::new_with_params(CRC64_ECMA_182),
+            CRC64_ECMA_182.check,
+        );
+    }
+
+    fn check_digest(mut digest: Digest, check: u64) {
+        digest.update(b"123");
+        digest.update(b"456");
+        digest.update(b"789");
+        assert_eq!(
+            digest.finalize(),
+            check,
+        );
     }
 
     #[test]
@@ -634,7 +738,7 @@ mod lib {
         // Create a test file with repeating zeros
         let test_file_path = "test/test_crc32_hash_file.bin";
         let data = vec![0u8; 1024 * 1024]; // 1 MiB of zeros
-        if let Err(e) = std::fs::write(test_file_path, &data) {
+        if let Err(e) = write(test_file_path, &data) {
             eprintln!("Skipping test due to write error: {}", e);
             return;
         }
@@ -645,6 +749,52 @@ mod lib {
         }
 
         std::fs::remove_file(test_file_path).unwrap();
+    }
+
+    #[test]
+    fn test_checksum_file_with_custom_params() {
+        // Create a test file with repeating zeros
+        let test_file_path = "test/test_crc32_hash_file_custom.bin";
+        let data = vec![0u8; 1024 * 1024]; // 1 MiB of zeros
+        if let Err(e) = write(test_file_path, &data) {
+            eprintln!("Skipping test due to write error: {}", e);
+            return;
+        }
+
+        // CRC-32 reflected
+        check_file(
+            CRC32_ISCSI,
+            test_file_path,
+            CRC32_ISCSI.check,
+        );
+
+        // CRC-32 forward
+        check_file(
+            CRC32_BZIP2,
+            test_file_path,
+            CRC32_BZIP2.check,
+        );
+
+        // CRC-64 reflected
+        check_file(
+            CRC64_NVME,
+            test_file_path,
+            CRC64_NVME.check,
+        );
+
+        // CRC-64 forward
+        check_file(
+            CRC64_ECMA_182,
+            test_file_path,
+            CRC64_ECMA_182.check,
+        );
+
+        std::fs::remove_file(test_file_path).unwrap();
+    }
+
+    fn check_file(params: CrcParams, file_path: &str, check: u64) {
+        let result = checksum_file_with_params(params, file_path, None).unwrap();
+        assert_eq!(result, check);
     }
 
     #[test]
