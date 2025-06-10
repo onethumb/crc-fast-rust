@@ -1,5 +1,10 @@
 # Changes for crc-fast-rust
 
+## [1.3.0](https://github.com/awesomized/crc-fast-rust/releases/tag/1.3.0) - 2025-06-10
+* [Replace C bindings for CRC32 fusion calculation](https://github.com/awesomized/crc-fast-rust/pull/9)
+* [Improve VPCLMULQDQ to use 512-bit wide registers](https://github.com/awesomized/crc-fast-rust/pull/8)
+* [Implement hardware accelerated XOR3 support](https://github.com/awesomized/crc-fast-rust/pull/9)
+
 ## [1.2.2](https://github.com/awesomized/crc-fast-rust/releases/tag/1.2.2) - 2025-06-02
 * [Remove println! from software fallback](https://github.com/awesomized/crc-fast-rust/pull/4)
 
