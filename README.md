@@ -254,7 +254,7 @@ cargo +nightly build --release --features=vpclmulqdq
 ```
 
 `AVX512` support with `VPCLMULQDQ` is stabilized on [1.89.0](https://releases.rs/docs/1.89.0/), so once that becomes
-stable in August 2025, this library will use it by default without needing the `nightly` toolchain.
+stable in August 2025, this library will be updated to use it by default without needing the `nightly` toolchain.
 
 ## Performance
 
