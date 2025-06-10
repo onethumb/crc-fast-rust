@@ -88,14 +88,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
     }
 
     // fallback to the standard x86 SSE implementation
-
-    let ops = X86Ops;
-
-    match params.width {
-        64 => algorithm::update::<X86Ops, Width64>(state, bytes, params, &ops),
-        32 => algorithm::update::<X86Ops, Width32>(state as u32, bytes, params, &ops) as u64,
-        _ => panic!("Unsupported CRC width: {}", params.width),
-    }
+    update_x86_sse(state, bytes, params)
 }
 
 #[inline]
@@ -109,7 +102,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
 }
 
 #[inline]
-#[cfg(target_arch = "x86")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
 unsafe fn update_x86_sse(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     let ops = X86Ops;
