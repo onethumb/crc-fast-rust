@@ -22,11 +22,10 @@ jobs:
         with:
           toolchain: ${{ matrix.rust-toolchain }}
           components: rustfmt, clippy
+          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}
       - name: Check
         run: cargo check
       - name: Architecture check
-        run: cargo run arch-check
-      - name: Architecture check (Optimized)
         run: cargo run arch-check
       - if: ${{ matrix.rust-toolchain != 'nightly' }}
         name: Format
