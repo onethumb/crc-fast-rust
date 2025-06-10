@@ -18,20 +18,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4 # not pinning to commit hash since this is a GitHub action, which we trust
-      - name: Install GLIBC for aarch64 Ubuntu 22.04
-        if: ${{ matrix.os == 'ubuntu-22.04-arm' }}
-        run: |
-            sudo apt update
-            sudo apt install -y libc6
-            wget http://ftp.gnu.org/gnu/libc/glibc-2.39.tar.gz
-            tar -xvzf glibc-2.39.tar.gz
-            cd glibc-2.39
-            mkdir build
-            cd build
-            ../configure --prefix=/opt/glibc-2.39
-            make -j$(nproc)
-            sudo make install
-            export LD_LIBRARY_PATH=/opt/glibc-2.39/lib:$LD_LIBRARY_PATH
       - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9 # v1.12.0
         with:
           toolchain: ${{ matrix.rust-toolchain }}
