@@ -4,6 +4,7 @@ use crc_fast::checksum;
 use crc_fast::CrcAlgorithm;
 use criterion::*;
 use rand::{rng, RngCore};
+use std::time::Duration;
 
 pub const SIZES: &[(&str, i32); 2] = &[
     ("1 MiB", 1024 * 1024),
@@ -29,11 +30,12 @@ pub const SIZES: &[(&str, i32); 2] = &[
 ];
 
 // these are the most important algorithms in popular use, with forward/reflected coverage
-pub const CRC32_ALGORITHMS: &[CrcAlgorithm; 4] = &[
-    CrcAlgorithm::Crc32Autosar, // reflected, internal
-    CrcAlgorithm::Crc32Iscsi,   // reflected, custom
-    CrcAlgorithm::Crc32IsoHdlc, // reflected, custom
-    CrcAlgorithm::Crc32Bzip2,   // forward, internal
+pub const CRC32_ALGORITHMS: &[CrcAlgorithm; 3] = &[
+    // benchmark both CRC-32/ISCSI and CRC-32/ISO-HDLC since they're special flowers with lots of
+    // different acceleration targets.
+    CrcAlgorithm::Crc32Iscsi,   // reflected
+    CrcAlgorithm::Crc32IsoHdlc, // reflected
+    CrcAlgorithm::Crc32Bzip2,   // forward
 ];
 
 // these are the most important algorithms in popular use, with forward/reflected coverage
@@ -78,12 +80,8 @@ fn bench_crc32(c: &mut Criterion) {
     let mut group = c.benchmark_group("CRC-32");
 
     println!(
-        "CRC-32/ISCSI implementation {}",
+        "Acceleration target: {}",
         crc_fast::get_calculator_target(CrcAlgorithm::Crc32Iscsi)
-    );
-    println!(
-        "CRC-32/ISO-HDLC implementation {}",
-        crc_fast::get_calculator_target(CrcAlgorithm::Crc32IsoHdlc)
     );
 
     for (size_name, size) in SIZES {
@@ -101,6 +99,7 @@ fn bench_crc32(c: &mut Criterion) {
 
             group.throughput(Throughput::Bytes(*size as u64));
             group.sample_size(1000);
+            group.measurement_time(Duration::from_secs(30));
 
             let bench_name = [alg_suffix.unwrap(), "(checksum)"].join(" ");
 
@@ -128,6 +127,11 @@ fn bench_crc32(c: &mut Criterion) {
 
 #[inline(always)]
 fn bench_crc64(c: &mut Criterion) {
+    println!(
+        "Acceleration target: {}",
+        crc_fast::get_calculator_target(CrcAlgorithm::Crc64Nvme)
+    );
+
     let mut group = c.benchmark_group("CRC-64");
 
     for (size_name, size) in SIZES {
@@ -145,6 +149,7 @@ fn bench_crc64(c: &mut Criterion) {
 
             group.throughput(Throughput::Bytes(*size as u64));
             group.sample_size(1000);
+            group.measurement_time(Duration::from_secs(30));
 
             let bench_name = [alg_suffix.unwrap(), "(checksum)"].join(" ");
 
@@ -170,6 +175,6 @@ fn bench_crc64(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_crc64, bench_crc32);
+criterion_group!(benches, bench_crc32, bench_crc64);
 
 criterion_main!(benches);
