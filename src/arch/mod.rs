@@ -38,7 +38,7 @@ mod x86;
 /// May use native CPU features
 #[inline]
 #[cfg(target_arch = "aarch64")]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     let ops = AArch64Ops;
 
@@ -55,7 +55,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
     not(feature = "vpclmulqdq"),
     any(target_arch = "x86", target_arch = "x86_64")
 ))]
-#[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+#[target_feature(enable = "ssse3,sse4.1,pclmulqdq")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     update_x86_sse(state, bytes, params)
 }
@@ -63,7 +63,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
 //#[rustversion::since(1.89)]
 #[inline]
 #[cfg(all(feature = "vpclmulqdq", target_arch = "x86"))]
-#[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+#[target_feature(enable = "ssse3,sse4.1,pclmulqdq")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     update_x86_sse(state, bytes, params)
 }
@@ -71,7 +71,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
 //#[rustversion::since(1.89)]
 #[inline]
 #[cfg(all(feature = "vpclmulqdq", target_arch = "x86_64"))]
-#[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+#[target_feature(enable = "ssse3,sse4.1,pclmulqdq")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     use std::arch::is_x86_feature_detected;
 
@@ -106,7 +106,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
 
 #[inline]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-#[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+#[target_feature(enable = "ssse3,sse4.1,pclmulqdq")]
 unsafe fn update_x86_sse(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
     let ops = X86Ops;
 

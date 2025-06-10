@@ -25,9 +25,9 @@ use crate::{crc32, crc64};
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "sse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 pub unsafe fn update<T: ArchOps, W: EnhancedCrcWidth>(
     state: W::Value,
     bytes: &[u8],
@@ -78,9 +78,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn process_by_strategy<T: ArchOps, W: EnhancedCrcWidth>(
     strategy: DataChunkProcessor,
     data: &[u8],
@@ -114,9 +114,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn process_large_aligned<T: ArchOps, W: EnhancedCrcWidth>(
     bytes: &[u8],
     state: &mut CrcState<T::Vector>,
@@ -167,9 +167,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn process_simd_chunks<T: ArchOps, W: EnhancedCrcWidth>(
     state: &mut CrcState<T::Vector>,
     first: &[T::Vector; 8],
@@ -247,9 +247,9 @@ unsafe fn process_simd_chunks<T: ArchOps, W: EnhancedCrcWidth>(
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn process_exactly_16<T: ArchOps, W: EnhancedCrcWidth>(
     data: &[u8],
     state: &mut CrcState<T::Vector>,
@@ -273,9 +273,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn process_16_byte_block<T: ArchOps>(
     data_ptr: *const u8,
     initial_crc: T::Vector,
@@ -296,9 +296,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 pub(crate) unsafe fn reflect_bytes<T: ArchOps>(
     reflector: &Reflector<T::Vector>,
     data: T::Vector,
@@ -317,9 +317,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn fold_and_xor<T: ArchOps, W: EnhancedCrcWidth>(
     current: T::Vector,
     coefficient: T::Vector,
@@ -347,9 +347,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn process_17_to_31<T: ArchOps, W: EnhancedCrcWidth>(
     data: &[u8],
     state: &mut CrcState<T::Vector>,
@@ -386,9 +386,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn process_32_to_255<T: ArchOps, W: EnhancedCrcWidth>(
     data: &[u8],
     state: &mut CrcState<T::Vector>,
@@ -448,9 +448,9 @@ where
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 unsafe fn get_last_two_xmms<T: ArchOps, W: EnhancedCrcWidth>(
     data: &[u8],
     remaining_len: usize,

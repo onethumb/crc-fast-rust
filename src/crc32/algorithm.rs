@@ -230,9 +230,9 @@ impl EnhancedCrcWidth for crate::structs::Width32 {
 #[inline]
 #[cfg_attr(
     any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse2,sse4.1,pclmulqdq")
+    target_feature(enable = "ssse3,sse4.1,pclmulqdq")
 )]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "neon,aes"))]
+#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
 pub(crate) unsafe fn process_0_to_15<T: ArchOps, W: EnhancedCrcWidth>(
     data: &[u8],
     state: &mut CrcState<T::Vector>,

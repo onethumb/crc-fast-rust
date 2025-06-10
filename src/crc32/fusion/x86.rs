@@ -78,7 +78,7 @@ unsafe fn clmul_hi_sse(a: __m128i, b: __m128i) -> __m128i {
 }
 
 #[inline]
-#[target_feature(enable = "pclmulqdq,sse2")]
+#[target_feature(enable = "pclmulqdq")]
 unsafe fn clmul_scalar_sse(a: u32, b: u32) -> __m128i {
     _mm_clmulepi64_si128(_mm_cvtsi32_si128(a as i32), _mm_cvtsi32_si128(b as i32), 0)
 }
@@ -117,7 +117,7 @@ unsafe fn xnmodp_iscsi_sse(mut n: u64) -> u32 {
 }
 
 #[inline]
-#[target_feature(enable = "pclmulqdq,sse2")]
+#[target_feature(enable = "pclmulqdq")]
 unsafe fn crc_shift_iscsi_sse(crc: u32, nbytes: usize) -> __m128i {
     clmul_scalar_sse(crc, xnmodp_iscsi_sse((nbytes * 8 - 33) as u64))
 }
@@ -344,7 +344,7 @@ pub unsafe fn crc32_iscsi_avx512_vpclmulqdq_v3x2(
 //#[rustversion::since(1.89)]
 #[inline]
 #[cfg(feature = "vpclmulqdq")]
-#[target_feature(enable = "avx512f,avx512vl,sse4.2,pclmulqdq,sse2,sse4.1")]
+#[target_feature(enable = "avx2,avx512f,avx512vl,pclmulqdq")]
 pub unsafe fn crc32_iscsi_avx512_v4s3x3(mut crc0: u32, mut buf: *const u8, mut len: usize) -> u32 {
     // Align to 8-byte boundary using hardware CRC32C instructions
     while len > 0 && (buf as usize & 7) != 0 {
@@ -501,7 +501,7 @@ pub unsafe fn crc32_iscsi_avx512_v4s3x3(mut crc0: u32, mut buf: *const u8, mut l
 ///
 /// ./generate -i sse -p crc32c -a v4s3x3
 #[inline]
-#[target_feature(enable = "sse4.2,pclmulqdq,sse2,sse4.1")]
+#[target_feature(enable = "sse4.2,pclmulqdq")]
 pub unsafe fn crc32_iscsi_sse_v4s3x3(mut crc0: u32, mut buf: *const u8, mut len: usize) -> u32 {
     // Align to 8-byte boundary using hardware CRC32C instructions
     while len > 0 && (buf as usize & 7) != 0 {

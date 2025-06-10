@@ -119,9 +119,7 @@ impl Vpclmulqdq512Ops {
     /// Note that #[inline(always)] loses the inlining performance boost, despite no native
     /// target_features being used directly. Odd since that's not how Rust's docs make it sound...
     #[inline]
-    #[target_feature(
-        enable = "avx,avx2,avx512f,avx512vl,avx512bw,vpclmulqdq,sse,sse2,sse4.1,pclmulqdq"
-    )]
+    #[target_feature(enable = "ssse3,avx2,avx512f,avx512vl,avx512bw,vpclmulqdq,pclmulqdq")]
     unsafe fn process_blocks<W: EnhancedCrcWidth>(
         &self,
         state: &mut CrcState<<Vpclmulqdq512Ops as ArchOps>::Vector>,
@@ -427,7 +425,7 @@ impl ArchOps for Vpclmulqdq512Ops {
 
     // Delegate all other methods to X86Ops
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn create_vector_from_u64_pair(
         &self,
         high: u64,
@@ -438,7 +436,7 @@ impl ArchOps for Vpclmulqdq512Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn create_vector_from_u64_pair_non_reflected(
         &self,
         high: u64,
@@ -448,49 +446,49 @@ impl ArchOps for Vpclmulqdq512Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn create_vector_from_u64(&self, value: u64, high: bool) -> Self::Vector {
         self.0.create_vector_from_u64(value, high)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn extract_u64s(&self, vector: Self::Vector) -> [u64; 2] {
         self.0.extract_u64s(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn extract_poly64s(&self, vector: Self::Vector) -> [u64; 2] {
         self.0.extract_poly64s(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn xor_vectors(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         self.0.xor_vectors(a, b)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn load_bytes(&self, ptr: *const u8) -> Self::Vector {
         self.0.load_bytes(ptr)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn load_aligned(&self, ptr: *const [u64; 2]) -> Self::Vector {
         self.0.load_aligned(ptr)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "ssse3")]
     unsafe fn shuffle_bytes(&self, data: Self::Vector, mask: Self::Vector) -> Self::Vector {
         self.0.shuffle_bytes(data, mask)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn blend_vectors(
         &self,
         a: Self::Vector,
@@ -501,115 +499,115 @@ impl ArchOps for Vpclmulqdq512Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_left_8(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_left_8(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn set_all_bytes(&self, value: u8) -> Self::Vector {
         self.0.set_all_bytes(value)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn create_compare_mask(&self, vector: Self::Vector) -> Self::Vector {
         self.0.create_compare_mask(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn and_vectors(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         self.0.and_vectors(a, b)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_32(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_right_32(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_left_32(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_left_32(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn create_vector_from_u32(&self, value: u32, high: bool) -> Self::Vector {
         self.0.create_vector_from_u32(value, high)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_left_4(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_left_4(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_4(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_right_4(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_8(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_right_8(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_5(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_right_5(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_6(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_right_6(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_7(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_right_7(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_12(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_right_12(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_left_12(&self, vector: Self::Vector) -> Self::Vector {
         self.0.shift_left_12(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "pclmulqdq")]
     unsafe fn carryless_mul_00(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         self.0.carryless_mul_00(a, b)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "pclmulqdq")]
     unsafe fn carryless_mul_01(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         self.0.carryless_mul_01(a, b)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "pclmulqdq")]
     unsafe fn carryless_mul_10(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         self.0.carryless_mul_10(a, b)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "pclmulqdq")]
     unsafe fn carryless_mul_11(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         self.0.carryless_mul_11(a, b)
     }

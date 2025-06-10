@@ -64,7 +64,7 @@ pub fn crc32_iso_hdlc(crc: u32, data: &[u8]) -> u32 {
 
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn clmul_lo_eor3(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
     // Polynomial multiply low parts - convert u128 result to uint64x2_t
     let result = vmull_p64(vgetq_lane_u64(a, 0), vgetq_lane_u64(b, 0));
@@ -73,7 +73,7 @@ unsafe fn clmul_lo_eor3(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
 
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn clmul_hi_eor3(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
     // Polynomial multiply high parts - convert u128 result to uint64x2_t
     let result = vmull_p64(vgetq_lane_u64(a, 1), vgetq_lane_u64(b, 1));
@@ -82,7 +82,7 @@ unsafe fn clmul_hi_eor3(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
 
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn clmul_scalar(a: u32, b: u32) -> uint64x2_t {
     // Polynomial multiply scalars - convert u128 result to uint64x2_t
     let result = vmull_p64(a as u64, b as u64);
@@ -92,7 +92,7 @@ unsafe fn clmul_scalar(a: u32, b: u32) -> uint64x2_t {
 // x^n mod P, in log(n) time
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn xnmodp_crc32_iscsi(mut n: u64) -> u32 {
     let mut stack = !1u64;
     let mut acc: u32;
@@ -130,7 +130,7 @@ unsafe fn xnmodp_crc32_iscsi(mut n: u64) -> u32 {
 
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn crc_shift_iscsi(crc: u32, nbytes: usize) -> uint64x2_t {
     clmul_scalar(crc, xnmodp_crc32_iscsi((nbytes * 8 - 33) as u64))
 }
@@ -138,7 +138,7 @@ unsafe fn crc_shift_iscsi(crc: u32, nbytes: usize) -> uint64x2_t {
 // x^n mod P, in log(n) time
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn xnmodp_iso_hdlc(mut n: u64) -> u32 {
     let mut stack = !1u64;
     let mut acc: u32;
@@ -176,7 +176,7 @@ unsafe fn xnmodp_iso_hdlc(mut n: u64) -> u32 {
 
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn crc_shift_iso_hdlc(crc: u32, nbytes: usize) -> uint64x2_t {
     clmul_scalar(crc, xnmodp_iso_hdlc((nbytes * 8 - 33) as u64))
 }
@@ -187,7 +187,7 @@ unsafe fn crc_shift_iso_hdlc(crc: u32, nbytes: usize) -> uint64x2_t {
 /// ./generate -i neon_eor3 -p crc32c -a v9s3x2e_s3
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes,sha3")]
+#[target_feature(enable = "aes,sha3")]
 unsafe fn crc32_iscsi_eor3_v9s3x2e_s3(mut crc0: u32, mut buf: *const u8, mut len: usize) -> u32 {
     // Align to 8-byte boundary
     while len > 0 && (buf as usize & 7) != 0 {
@@ -382,7 +382,7 @@ unsafe fn crc32_iscsi_eor3_v9s3x2e_s3(mut crc0: u32, mut buf: *const u8, mut len
 }
 
 #[inline]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn clmul_lo_e(a: uint64x2_t, b: uint64x2_t, c: uint64x2_t) -> uint64x2_t {
     // Polynomial multiply low parts and XOR with c
     let mul_result = vmull_p64(vgetq_lane_u64(a, 0), vgetq_lane_u64(b, 0));
@@ -391,7 +391,7 @@ unsafe fn clmul_lo_e(a: uint64x2_t, b: uint64x2_t, c: uint64x2_t) -> uint64x2_t 
 }
 
 #[inline]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn clmul_hi_e(a: uint64x2_t, b: uint64x2_t, c: uint64x2_t) -> uint64x2_t {
     // Polynomial multiply high parts and XOR with c
     let mul_result = vmull_p64(vgetq_lane_u64(a, 1), vgetq_lane_u64(b, 1));
@@ -404,7 +404,7 @@ unsafe fn clmul_hi_e(a: uint64x2_t, b: uint64x2_t, c: uint64x2_t) -> uint64x2_t 
 ///
 /// ./generate -i neon -p crc32c -a v12e_v1
 #[inline]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn crc32_iscsi_v12e_v1(mut crc0: u32, mut buf: *const u8, mut len: usize) -> u32 {
     // Align to 8-byte boundary
     while len > 0 && (buf as usize & 7) != 0 {
@@ -564,7 +564,7 @@ unsafe fn crc32_iscsi_v12e_v1(mut crc0: u32, mut buf: *const u8, mut len: usize)
 /// ./generate -i neon_eor3 -p crc32 -a v9s3x2e_s3
 #[inline]
 #[cfg(target_feature = "sha3")]
-#[target_feature(enable = "neon,aes,sha3")]
+#[target_feature(enable = "aes,sha3")]
 unsafe fn crc32_iso_hdlc_eor3_v9s3x2e_s3(mut crc0: u32, mut buf: *const u8, mut len: usize) -> u32 {
     // Align to 8-byte boundary
     while len > 0 && (buf as usize & 7) != 0 {
@@ -764,7 +764,7 @@ unsafe fn crc32_iso_hdlc_eor3_v9s3x2e_s3(mut crc0: u32, mut buf: *const u8, mut 
 ///
 /// ./generate -i neon -p crc32 -a v12e_v1
 #[inline]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 unsafe fn crc32_iso_hdlc_v12e_v1(mut crc0: u32, mut buf: *const u8, mut len: usize) -> u32 {
     // Align to 8-byte boundary
     while len > 0 && (buf as usize & 7) != 0 {

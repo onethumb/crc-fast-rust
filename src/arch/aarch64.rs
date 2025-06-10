@@ -221,7 +221,7 @@ impl ArchOps for AArch64Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "neon,aes")]
+    #[target_feature(enable = "aes")]
     unsafe fn carryless_mul_00(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         vreinterpretq_u8_p128(vmull_p64(
             vgetq_lane_p64(vreinterpretq_p64_u8(a), 0),
@@ -230,7 +230,7 @@ impl ArchOps for AArch64Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "neon,aes")]
+    #[target_feature(enable = "aes")]
     unsafe fn carryless_mul_01(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         // Low 64 bits of a, high 64 bits of b
         let a_low = vgetq_lane_p64(vreinterpretq_p64_u8(a), 1);
@@ -239,7 +239,7 @@ impl ArchOps for AArch64Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "neon,aes")]
+    #[target_feature(enable = "aes")]
     unsafe fn carryless_mul_10(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         vreinterpretq_u8_p128(vmull_p64(
             vgetq_lane_p64(vreinterpretq_p64_u8(a), 0),
@@ -248,7 +248,7 @@ impl ArchOps for AArch64Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "neon,aes")]
+    #[target_feature(enable = "aes")]
     unsafe fn carryless_mul_11(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         vreinterpretq_u8_p128(vmull_p64(
             vgetq_lane_p64(vreinterpretq_p64_u8(a), 1),
@@ -258,7 +258,7 @@ impl ArchOps for AArch64Ops {
 
     #[inline]
     #[cfg(target_feature = "sha3")]
-    #[target_feature(enable = "neon,sha3")]
+    #[target_feature(enable = "sha3")]
     unsafe fn xor3_vectors(
         &self,
         a: Self::Vector,

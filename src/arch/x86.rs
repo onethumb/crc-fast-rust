@@ -23,7 +23,7 @@ impl ArchOps for X86Ops {
     type Vector = __m128i;
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn create_vector_from_u64_pair(
         &self,
         high: u64,
@@ -39,7 +39,7 @@ impl ArchOps for X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn create_vector_from_u64_pair_non_reflected(
         &self,
         high: u64,
@@ -50,54 +50,54 @@ impl ArchOps for X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn create_vector_from_u64(&self, value: u64, high: bool) -> Self::Vector {
         // x86 uses custom helper
         self.create_u64_vector(value, high)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn extract_u64s(&self, vector: Self::Vector) -> [u64; 2] {
         [self.extract_u64_low(vector), self.extract_u64_high(vector)]
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn extract_poly64s(&self, vector: Self::Vector) -> [u64; 2] {
         // On x86, poly64s and u64s extraction is the same
         self.extract_u64s(vector)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn xor_vectors(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         _mm_xor_si128(a, b)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn load_bytes(&self, ptr: *const u8) -> Self::Vector {
         // x86 requires cast to __m128i*
         _mm_loadu_si128(ptr as *const __m128i)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn load_aligned(&self, ptr: *const [u64; 2]) -> Self::Vector {
         // x86 requires cast to __m128i*
         _mm_loadu_si128(ptr as *const __m128i)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,ssse3")]
+    #[target_feature(enable = "ssse3")]
     unsafe fn shuffle_bytes(&self, data: Self::Vector, mask: Self::Vector) -> Self::Vector {
         // x86 uses specific SSSE3 instruction
         _mm_shuffle_epi8(data, mask)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn blend_vectors(
         &self,
         a: Self::Vector,
@@ -109,14 +109,14 @@ impl ArchOps for X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_left_8(&self, vector: Self::Vector) -> Self::Vector {
         // x86 has a dedicated shift instruction
         _mm_slli_si128(vector, 8)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn set_all_bytes(&self, value: u8) -> Self::Vector {
         _mm_set1_epi8(value as i8)
     }
@@ -128,25 +128,25 @@ impl ArchOps for X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn and_vectors(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         _mm_and_si128(a, b)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_32(&self, vector: Self::Vector) -> Self::Vector {
         _mm_srli_si128(vector, 4)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_left_32(&self, vector: Self::Vector) -> Self::Vector {
         _mm_slli_si128(vector, 4)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn create_vector_from_u32(&self, value: u32, high: bool) -> Self::Vector {
         if high {
             _mm_insert_epi32(_mm_set1_epi32(0), value as i32, 3)
@@ -156,73 +156,73 @@ impl ArchOps for X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_left_4(&self, vector: Self::Vector) -> Self::Vector {
         _mm_slli_si128(vector, 4)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_4(&self, vector: Self::Vector) -> Self::Vector {
         _mm_srli_si128(vector, 4)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_8(&self, vector: Self::Vector) -> Self::Vector {
         _mm_srli_si128(vector, 8)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_5(&self, vector: Self::Vector) -> Self::Vector {
         _mm_srli_si128(vector, 5)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_6(&self, vector: Self::Vector) -> Self::Vector {
         _mm_srli_si128(vector, 6)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_7(&self, vector: Self::Vector) -> Self::Vector {
         _mm_srli_si128(vector, 7)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_right_12(&self, vector: Self::Vector) -> Self::Vector {
         _mm_srli_si128(vector, 12)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn shift_left_12(&self, vector: Self::Vector) -> Self::Vector {
         _mm_slli_si128(vector, 12)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "pclmulqdq")]
     unsafe fn carryless_mul_00(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         _mm_clmulepi64_si128(a, b, 0x00)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "pclmulqdq")]
     unsafe fn carryless_mul_01(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         _mm_clmulepi64_si128(a, b, 0x01)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "pclmulqdq")]
     unsafe fn carryless_mul_10(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         _mm_clmulepi64_si128(a, b, 0x10)
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1,pclmulqdq")]
+    #[target_feature(enable = "pclmulqdq")]
     unsafe fn carryless_mul_11(&self, a: Self::Vector, b: Self::Vector) -> Self::Vector {
         _mm_clmulepi64_si128(a, b, 0x11)
     }
@@ -261,7 +261,7 @@ impl ArchOps for X86Ops {
 impl X86Ops {
     // Helper methods specific to x86/x86_64
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn set_epi64x(&self, e1: u64, e0: u64) -> __m128i {
         #[cfg(target_arch = "x86_64")]
         {
@@ -280,7 +280,7 @@ impl X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn create_u64_vector(&self, value: u64, high: bool) -> __m128i {
         if high {
             self.set_epi64x(value, 0)
@@ -290,7 +290,7 @@ impl X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn extract_u64_low(&self, v: __m128i) -> u64 {
         #[cfg(target_arch = "x86_64")]
         {
@@ -306,7 +306,7 @@ impl X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse2")]
     unsafe fn extract_u64_high(&self, v: __m128i) -> u64 {
         #[cfg(target_arch = "x86_64")]
         {
@@ -332,7 +332,7 @@ impl X86Ops {
     }
 
     #[inline]
-    #[target_feature(enable = "sse2,sse4.1")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn xor3_vectors_sse(&self, a: __m128i, b: __m128i, c: __m128i) -> __m128i {
         // x86 doesn't have native XOR3 in SSE, use two XORs
         _mm_xor_si128(_mm_xor_si128(a, b), c)

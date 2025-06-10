@@ -15,7 +15,7 @@ use std::arch::x86_64::*;
 
 #[cfg(target_arch = "aarch64")]
 #[allow(dead_code)]
-#[target_feature(enable = "neon,aes")]
+#[target_feature(enable = "aes")]
 pub(crate) unsafe fn print_xmm_hex(prefix: &str, xmm: uint8x16_t) {
     let mut temp = [0u64; 2];
     vst1q_u64(temp.as_mut_ptr(), vreinterpretq_u64_u8(xmm));
@@ -24,7 +24,7 @@ pub(crate) unsafe fn print_xmm_hex(prefix: &str, xmm: uint8x16_t) {
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(dead_code)]
-#[target_feature(enable = "sse2,sse4.1")]
+#[target_feature(enable = "sse4.1")]
 pub(crate) unsafe fn print_xmm_hex(prefix: &str, xmm: __m128i) {
     let mut temp = [0u64; 2];
     _mm_storeu_si128(temp.as_mut_ptr() as *mut __m128i, xmm);
