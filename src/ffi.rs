@@ -12,6 +12,7 @@ use crate::{get_calculator_target, Digest};
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
+use crate::structs::CrcParams;
 
 /// A handle to the Digest object
 #[repr(C)]
@@ -68,10 +69,50 @@ impl From<CrcFastAlgorithm> for CrcAlgorithm {
     }
 }
 
+/// Custom CRC parameters
+#[repr(C)]
+pub struct CrcFastParams {
+    pub algorithm: CrcFastAlgorithm,
+    pub width: u8,
+    pub poly: u64,
+    pub init: u64,
+    pub refin: bool,
+    pub refout: bool,
+    pub xorout: u64,
+    pub check: u64,
+    pub keys: [u64; 23],
+}
+
+// Convert from FFI struct to internal struct
+impl From<CrcFastParams> for CrcParams {
+    fn from(value: CrcFastParams) -> Self {
+        CrcParams {
+            algorithm: value.algorithm.into(),
+            name: "custom", // C interface doesn't need the name field
+            width: value.width,
+            poly: value.poly,
+            init: value.init,
+            refin: value.refin,
+            refout: value.refout,
+            xorout: value.xorout,
+            check: value.check,
+            keys: value.keys,
+        }
+    }
+}
+
 /// Creates a new Digest to compute CRC checksums using algorithm
 #[no_mangle]
 pub extern "C" fn crc_fast_digest_new(algorithm: CrcFastAlgorithm) -> *mut CrcFastDigestHandle {
     let digest = Box::new(Digest::new(algorithm.into()));
+    let handle = Box::new(CrcFastDigestHandle(Box::into_raw(digest)));
+    Box::into_raw(handle)
+}
+
+/// Creates a new Digest to compute CRC checksums using custom parameters
+#[no_mangle]
+pub extern "C" fn crc_fast_digest_new_with_params(params: CrcFastParams) -> *mut CrcFastDigestHandle {
+    let digest = Box::new(Digest::new_with_params(params.into()));
     let handle = Box::new(CrcFastDigestHandle(Box::into_raw(digest)));
     Box::into_raw(handle)
 }
@@ -197,6 +238,23 @@ pub extern "C" fn crc_fast_checksum(
     }
 }
 
+/// Helper method to calculate a CRC checksum directly for data using custom parameters
+#[no_mangle]
+pub extern "C" fn crc_fast_checksum_with_params(
+    params: CrcFastParams,
+    data: *const c_char,
+    len: usize,
+) -> u64 {
+    if data.is_null() {
+        return 0;
+    }
+    unsafe {
+        #[allow(clippy::unnecessary_cast)]
+        let bytes = slice::from_raw_parts(data as *const u8, len);
+        crate::checksum_with_params(params.into(), bytes)
+    }
+}
+
 /// Helper method to just calculate a CRC checksum directly for a file using algorithm
 #[no_mangle]
 pub extern "C" fn crc_fast_checksum_file(
@@ -215,6 +273,27 @@ pub extern "C" fn crc_fast_checksum_file(
             None,
         )
         .unwrap()
+    }
+}
+
+/// Helper method to calculate a CRC checksum directly for a file using custom parameters
+#[no_mangle]
+pub extern "C" fn crc_fast_checksum_file_with_params(
+    params: CrcFastParams,
+    path_ptr: *const u8,
+    path_len: usize,
+) -> u64 {
+    if path_ptr.is_null() {
+        return 0;
+    }
+
+    unsafe {
+        crate::checksum_file_with_params(
+            params.into(),
+            &convert_to_string(path_ptr, path_len),
+            None,
+        )
+            .unwrap_or(0) // Return 0 on error instead of panicking
     }
 }
 

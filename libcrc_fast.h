@@ -50,6 +50,21 @@ typedef struct CrcFastDigestHandle {
   struct CrcFastDigest *_0;
 } CrcFastDigestHandle;
 
+/**
+ * Custom CRC parameters
+ */
+typedef struct CrcFastParams {
+  enum CrcFastAlgorithm algorithm;
+  uint8_t width;
+  uint64_t poly;
+  uint64_t init;
+  bool refin;
+  bool refout;
+  uint64_t xorout;
+  uint64_t check;
+  uint64_t keys[23];
+} CrcFastParams;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -58,6 +73,11 @@ extern "C" {
  * Creates a new Digest to compute CRC checksums using algorithm
  */
 struct CrcFastDigestHandle *crc_fast_digest_new(enum CrcFastAlgorithm algorithm);
+
+/**
+ * Creates a new Digest to compute CRC checksums using custom parameters
+ */
+struct CrcFastDigestHandle *crc_fast_digest_new_with_params(struct CrcFastParams params);
 
 /**
  * Updates the Digest with data
@@ -101,11 +121,25 @@ uint64_t crc_fast_digest_get_amount(struct CrcFastDigestHandle *handle);
 uint64_t crc_fast_checksum(enum CrcFastAlgorithm algorithm, const char *data, uintptr_t len);
 
 /**
+ * Helper method to calculate a CRC checksum directly for data using custom parameters
+ */
+uint64_t crc_fast_checksum_with_params(struct CrcFastParams params,
+                                       const char *data,
+                                       uintptr_t len);
+
+/**
  * Helper method to just calculate a CRC checksum directly for a file using algorithm
  */
 uint64_t crc_fast_checksum_file(enum CrcFastAlgorithm algorithm,
                                 const uint8_t *path_ptr,
                                 uintptr_t path_len);
+
+/**
+ * Helper method to calculate a CRC checksum directly for a file using custom parameters
+ */
+uint64_t crc_fast_checksum_file_with_params(struct CrcFastParams params,
+                                            const uint8_t *path_ptr,
+                                            uintptr_t path_len);
 
 /**
  * Combine two CRC checksums using algorithm
