@@ -29,7 +29,10 @@ pub fn crc32_iscsi(crc: u32, data: &[u8]) -> u32 {
 #[rustversion::since(1.89)]
 #[inline(always)]
 pub fn crc32_iscsi(crc: u32, data: &[u8]) -> u32 {
-    if is_x86_feature_detected!("vpclmulqdq") {
+    if is_x86_feature_detected!("vpclmulqdq")
+        && is_x86_feature_detected!("avx512f")
+        && is_x86_feature_detected!("avx512vl")
+    {
         unsafe {
             return crc32_iscsi_avx512_vpclmulqdq_v3x2(crc, data.as_ptr(), data.len());
         }
