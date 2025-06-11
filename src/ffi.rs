@@ -339,9 +339,7 @@ pub extern "C" fn crc_fast_get_custom_params(
     let name = if name_ptr.is_null() {
         "custom"
     } else {
-        unsafe {
-            CStr::from_ptr(name_ptr).to_str().unwrap_or("custom")
-        }
+        unsafe { CStr::from_ptr(name_ptr).to_str().unwrap_or("custom") }
     };
 
     // Get the custom params from the library
