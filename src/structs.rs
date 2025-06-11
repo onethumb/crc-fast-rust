@@ -2,24 +2,8 @@
 
 #![allow(dead_code)]
 
-use crate::arch;
 use crate::traits::{CrcCalculator, CrcWidth};
-use crate::CrcAlgorithm;
-
-#[derive(Clone, Copy, Debug)]
-pub struct CrcParams {
-    pub algorithm: CrcAlgorithm,
-    pub name: &'static str,
-    pub width: u8,
-    pub poly: u64,
-    pub init: u64,
-    pub refin: bool,
-    pub refout: bool,
-    pub xorout: u64,
-    pub check: u64,
-    pub keys: [u64; 23],
-}
-
+use crate::{arch, CrcParams};
 /// CRC-32 width implementation
 #[derive(Clone, Copy)]
 pub struct Width32;

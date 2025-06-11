@@ -5,8 +5,8 @@
 #![cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
 
 use crate::consts::CRC_64_NVME;
-use crate::structs::CrcParams;
 use crate::CrcAlgorithm;
+use crate::CrcParams;
 use crc::Table;
 
 const RUST_CRC32_AIXM: crc::Crc<u32, Table<16>> =

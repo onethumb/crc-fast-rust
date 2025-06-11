@@ -116,7 +116,7 @@ use crate::crc32::fusion;
 use crate::crc64::consts::{
     CRC64_ECMA_182, CRC64_GO_ISO, CRC64_MS, CRC64_NVME, CRC64_REDIS, CRC64_WE, CRC64_XZ,
 };
-use crate::structs::{Calculator, CrcParams};
+use crate::structs::Calculator;
 use crate::traits::CrcCalculator;
 use digest::{DynDigest, InvalidBufferSize};
 use std::fs::File;
@@ -159,6 +159,21 @@ pub enum CrcAlgorithm {
     Crc64Redis,
     Crc64We,
     Crc64Xz,
+}
+
+/// Parameters for CRC computation, including polynomial, initial value, and other settings.
+#[derive(Clone, Copy, Debug)]
+pub struct CrcParams {
+    pub algorithm: CrcAlgorithm,
+    pub name: &'static str,
+    pub width: u8,
+    pub poly: u64,
+    pub init: u64,
+    pub refin: bool,
+    pub refout: bool,
+    pub xorout: u64,
+    pub check: u64,
+    pub keys: [u64; 23],
 }
 
 /// Type alias for a function pointer that represents a CRC calculation function.
@@ -493,9 +508,9 @@ pub fn checksum_combine_with_custom_params(
 }
 
 /// Returns the custom CRC parameters for a given set of Rocksoft CRC parameters.
-/// 
+///
 /// Does not support mis-matched refin/refout parameters, so both must be true or both false.
-/// 
+///
 /// Rocksoft parameters for lots of variants: https://reveng.sourceforge.io/crc-catalogue/all.htm
 pub fn get_custom_params(
     name: &'static str,
@@ -614,8 +629,7 @@ mod lib {
     use super::*;
     use crate::test::consts::{TEST_ALL_CONFIGS, TEST_CHECK_STRING};
     use crate::test::enums::AnyCrcTestConfig;
-    use crate::CrcAlgorithm::Crc32Iscsi;
-    use cbindgen::Language::{Cxx, C};
+    use cbindgen::Language::C;
     use cbindgen::Style::Both;
     use rand::{rng, Rng};
     use std::fs::{read, write};

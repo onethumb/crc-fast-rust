@@ -7,8 +7,8 @@
 
 #![cfg(any(target_arch = "aarch64", target_arch = "x86_64", target_arch = "x86"))]
 
-use crate::structs::CrcParams;
 use crate::CrcAlgorithm;
+use crate::CrcParams;
 use crate::{get_calculator_target, Digest};
 use std::ffi::CStr;
 use std::os::raw::c_char;
