@@ -26,7 +26,7 @@ jobs:
       - name: Check
         run: cargo check
       - name: Architecture check
-        run: cargo run arch-check
+        run: cargo run --bin arch-check
       - if: ${{ matrix.rust-toolchain != 'nightly' }}
         name: Format
         run: cargo fmt -- --check
@@ -56,6 +56,8 @@ jobs:
         run: cargo install cross --locked --version 0.2.5
       - name: Check
         run: cross check --target ${{ matrix.target }}
+      - name: Architecture check
+        run: cross run --bin arch-check --target ${{ matrix.target }}
       - name: Test
         run: cross test --target ${{ matrix.target }}
 
@@ -79,5 +81,7 @@ jobs:
         run: cargo install cross --locked --version 0.2.5
       - name: Check
         run: cross check --target ${{ matrix.target }}
+      - name: Architecture check
+        run: cross run --bin arch-check --target ${{ matrix.target }}
       - name: Test
         run: cross test --target ${{ matrix.target }}
