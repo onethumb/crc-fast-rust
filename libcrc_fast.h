@@ -19,12 +19,14 @@ typedef enum CrcFastAlgorithm {
   Crc32Bzip2,
   Crc32CdRomEdc,
   Crc32Cksum,
+  Crc32Custom,
   Crc32Iscsi,
   Crc32IsoHdlc,
   Crc32Jamcrc,
   Crc32Mef,
   Crc32Mpeg2,
   Crc32Xfer,
+  Crc64Custom,
   Crc64Ecma182,
   Crc64GoIso,
   Crc64Ms,
@@ -148,6 +150,25 @@ uint64_t crc_fast_checksum_combine(enum CrcFastAlgorithm algorithm,
                                    uint64_t checksum1,
                                    uint64_t checksum2,
                                    uint64_t checksum2_len);
+
+/**
+ * Combine two CRC checksums using custom parameters
+ */
+uint64_t crc_fast_checksum_combine_with_custom_params(struct CrcFastParams params,
+                                                      uint64_t checksum1,
+                                                      uint64_t checksum2,
+                                                      uint64_t checksum2_len);
+
+/**
+ * Returns the custom CRC parameters for a given set of Rocksoft CRC parameters
+ */
+struct CrcFastParams crc_fast_get_custom_params(const char *name_ptr,
+                                                uint8_t width,
+                                                uint64_t poly,
+                                                uint64_t init,
+                                                bool reflected,
+                                                uint64_t xorout,
+                                                uint64_t check);
 
 /**
  * Gets the target build properties (CPU architecture and fine-tuning parameters) for this algorithm

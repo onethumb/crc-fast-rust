@@ -27,12 +27,14 @@ pub enum CrcFastAlgorithm {
     Crc32Bzip2,
     Crc32CdRomEdc,
     Crc32Cksum,
+    Crc32Custom,
     Crc32Iscsi,
     Crc32IsoHdlc,
     Crc32Jamcrc,
     Crc32Mef,
     Crc32Mpeg2,
     Crc32Xfer,
+    Crc64Custom,
     Crc64Ecma182,
     Crc64GoIso,
     Crc64Ms,
@@ -52,12 +54,14 @@ impl From<CrcFastAlgorithm> for CrcAlgorithm {
             CrcFastAlgorithm::Crc32Bzip2 => CrcAlgorithm::Crc32Bzip2,
             CrcFastAlgorithm::Crc32CdRomEdc => CrcAlgorithm::Crc32CdRomEdc,
             CrcFastAlgorithm::Crc32Cksum => CrcAlgorithm::Crc32Cksum,
+            CrcFastAlgorithm::Crc32Custom => CrcAlgorithm::Crc32Custom,
             CrcFastAlgorithm::Crc32Iscsi => CrcAlgorithm::Crc32Iscsi,
             CrcFastAlgorithm::Crc32IsoHdlc => CrcAlgorithm::Crc32IsoHdlc,
             CrcFastAlgorithm::Crc32Jamcrc => CrcAlgorithm::Crc32Jamcrc,
             CrcFastAlgorithm::Crc32Mef => CrcAlgorithm::Crc32Mef,
             CrcFastAlgorithm::Crc32Mpeg2 => CrcAlgorithm::Crc32Mpeg2,
             CrcFastAlgorithm::Crc32Xfer => CrcAlgorithm::Crc32Xfer,
+            CrcFastAlgorithm::Crc64Custom => CrcAlgorithm::Crc64Custom,
             CrcFastAlgorithm::Crc64Ecma182 => CrcAlgorithm::Crc64Ecma182,
             CrcFastAlgorithm::Crc64GoIso => CrcAlgorithm::Crc64GoIso,
             CrcFastAlgorithm::Crc64Ms => CrcAlgorithm::Crc64Ms,
@@ -308,6 +312,66 @@ pub extern "C" fn crc_fast_checksum_combine(
     checksum2_len: u64,
 ) -> u64 {
     crate::checksum_combine(algorithm.into(), checksum1, checksum2, checksum2_len)
+}
+
+/// Combine two CRC checksums using custom parameters
+#[no_mangle]
+pub extern "C" fn crc_fast_checksum_combine_with_custom_params(
+    params: CrcFastParams,
+    checksum1: u64,
+    checksum2: u64,
+    checksum2_len: u64,
+) -> u64 {
+    crate::checksum_combine_with_custom_params(params.into(), checksum1, checksum2, checksum2_len)
+}
+
+/// Returns the custom CRC parameters for a given set of Rocksoft CRC parameters
+#[no_mangle]
+pub extern "C" fn crc_fast_get_custom_params(
+    name_ptr: *const c_char,
+    width: u8,
+    poly: u64,
+    init: u64,
+    reflected: bool,
+    xorout: u64,
+    check: u64,
+) -> CrcFastParams {
+    let name = if name_ptr.is_null() {
+        "custom"
+    } else {
+        unsafe {
+            CStr::from_ptr(name_ptr).to_str().unwrap_or("custom")
+        }
+    };
+
+    // Get the custom params from the library
+    let params = crate::get_custom_params(
+        // We need to use a static string for the name field
+        Box::leak(name.to_string().into_boxed_str()),
+        width,
+        poly,
+        init,
+        reflected,
+        xorout,
+        check,
+    );
+
+    // Convert to FFI struct
+    CrcFastParams {
+        algorithm: match width {
+            32 => CrcFastAlgorithm::Crc32Custom,
+            64 => CrcFastAlgorithm::Crc64Custom,
+            _ => panic!("Unsupported width: {}", width),
+        },
+        width: params.width,
+        poly: params.poly,
+        init: params.init,
+        refin: params.refin,
+        refout: params.refout,
+        xorout: params.xorout,
+        check: params.check,
+        keys: params.keys,
+    }
 }
 
 /// Gets the target build properties (CPU architecture and fine-tuning parameters) for this algorithm
