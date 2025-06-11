@@ -144,12 +144,14 @@ pub enum CrcAlgorithm {
     Crc32Bzip2,
     Crc32CdRomEdc,
     Crc32Cksum,
+    Crc32Custom, // Custom CRC-32 implementation, not defined in consts
     Crc32Iscsi,
     Crc32IsoHdlc,
     Crc32Jamcrc,
     Crc32Mef,
     Crc32Mpeg2,
     Crc32Xfer,
+    Crc64Custom, // Custom CRC-64 implementation, not defined in consts
     Crc64Ecma182,
     Crc64GoIso,
     Crc64Ms,
@@ -480,6 +482,52 @@ pub fn checksum_combine(
     combine::checksums(checksum1, checksum2, checksum2_len, params)
 }
 
+/// Combines two CRC checksums using the custom specified parameters.
+pub fn checksum_combine_with_custom_params(
+    params: CrcParams,
+    checksum1: u64,
+    checksum2: u64,
+    checksum2_len: u64,
+) -> u64 {
+    combine::checksums(checksum1, checksum2, checksum2_len, params)
+}
+
+/// Returns the custom CRC parameters for a given set of Rocksoft CRC parameters.
+/// 
+/// Does not support mis-matched refin/refout parameters, so both must be true or both false.
+/// 
+/// Rocksoft parameters for lots of variants: https://reveng.sourceforge.io/crc-catalogue/all.htm
+pub fn get_custom_params(
+    name: &'static str,
+    width: u8,
+    poly: u64,
+    init: u64,
+    reflected: bool,
+    xorout: u64,
+    check: u64,
+) -> CrcParams {
+    let keys = generate::keys(width, poly, reflected);
+
+    let algorithm = match width {
+        32 => CrcAlgorithm::Crc32Custom,
+        64 => CrcAlgorithm::Crc64Custom,
+        _ => panic!("Unsupported width: {}", width),
+    };
+
+    CrcParams {
+        algorithm,
+        name,
+        width,
+        poly,
+        init,
+        refin: reflected,
+        refout: reflected,
+        xorout,
+        check,
+        keys,
+    }
+}
+
 /// Returns the target used to calculate the CRC checksum for the specified algorithm.
 ///
 /// These strings are informational only, not stable, and shouldn't be relied on to match across
@@ -505,12 +553,18 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
         CrcAlgorithm::Crc32Bzip2 => (Calculator::calculate as CalculatorFn, CRC32_BZIP2),
         CrcAlgorithm::Crc32CdRomEdc => (Calculator::calculate as CalculatorFn, CRC32_CD_ROM_EDC),
         CrcAlgorithm::Crc32Cksum => (Calculator::calculate as CalculatorFn, CRC32_CKSUM),
+        CrcAlgorithm::Crc32Custom => {
+            panic!("Custom CRC-32 requires parameters via get_custom_params()")
+        }
         CrcAlgorithm::Crc32Iscsi => (crc32_iscsi_calculator as CalculatorFn, CRC32_ISCSI),
         CrcAlgorithm::Crc32IsoHdlc => (crc32_iso_hdlc_calculator as CalculatorFn, CRC32_ISO_HDLC),
         CrcAlgorithm::Crc32Jamcrc => (Calculator::calculate as CalculatorFn, CRC32_JAMCRC),
         CrcAlgorithm::Crc32Mef => (Calculator::calculate as CalculatorFn, CRC32_MEF),
         CrcAlgorithm::Crc32Mpeg2 => (Calculator::calculate as CalculatorFn, CRC32_MPEG_2),
         CrcAlgorithm::Crc32Xfer => (Calculator::calculate as CalculatorFn, CRC32_XFER),
+        CrcAlgorithm::Crc64Custom => {
+            panic!("Custom CRC-64 requires parameters via get_custom_params()")
+        }
         CrcAlgorithm::Crc64Ecma182 => (Calculator::calculate as CalculatorFn, CRC64_ECMA_182),
         CrcAlgorithm::Crc64GoIso => (Calculator::calculate as CalculatorFn, CRC64_GO_ISO),
         CrcAlgorithm::Crc64Ms => (Calculator::calculate as CalculatorFn, CRC64_MS),
@@ -560,6 +614,7 @@ mod lib {
     use super::*;
     use crate::test::consts::{TEST_ALL_CONFIGS, TEST_CHECK_STRING};
     use crate::test::enums::AnyCrcTestConfig;
+    use crate::CrcAlgorithm::Crc32Iscsi;
     use cbindgen::Language::{Cxx, C};
     use cbindgen::Style::Both;
     use rand::{rng, Rng};
@@ -609,6 +664,39 @@ mod lib {
         assert_eq!(
             checksum_with_params(CRC64_ECMA_182, TEST_CHECK_STRING),
             CRC64_ECMA_182.check,
+        );
+    }
+
+    #[test]
+    fn test_get_custom_params() {
+        let custom_crc32 = get_custom_params(
+            "Custom CRC-32/ISCSI",
+            32,
+            CRC32_ISCSI.poly,
+            CRC32_ISCSI.init,
+            CRC32_ISCSI.refin,
+            CRC32_ISCSI.xorout,
+            CRC32_ISCSI.check,
+        );
+
+        assert_eq!(
+            checksum_with_params(custom_crc32, TEST_CHECK_STRING),
+            CRC32_ISCSI.check,
+        );
+
+        let custom_crc64 = get_custom_params(
+            "Custom CRC-64/NVME",
+            64,
+            CRC64_NVME.poly,
+            CRC64_NVME.init,
+            CRC64_NVME.refin,
+            CRC64_NVME.xorout,
+            CRC64_NVME.check,
+        );
+
+        assert_eq!(
+            checksum_with_params(custom_crc64, TEST_CHECK_STRING),
+            CRC64_NVME.check,
         );
     }
 
@@ -718,6 +806,41 @@ mod lib {
 
             assert_eq!(digest1.finalize(), check)
         }
+    }
+
+    #[test]
+    fn test_combine_with_custom_params() {
+        // CRC-32 reflected
+        let checksum1 = checksum_with_params(CRC32_ISCSI, "1234".as_ref());
+        let checksum2 = checksum_with_params(CRC32_ISCSI, "56789".as_ref());
+        assert_eq!(
+            checksum_combine_with_custom_params(CRC32_ISCSI, checksum1, checksum2, 5),
+            CRC32_ISCSI.check,
+        );
+
+        // CRC-32 forward
+        let checksum1 = checksum_with_params(CRC32_BZIP2, "1234".as_ref());
+        let checksum2 = checksum_with_params(CRC32_BZIP2, "56789".as_ref());
+        assert_eq!(
+            checksum_combine_with_custom_params(CRC32_BZIP2, checksum1, checksum2, 5),
+            CRC32_BZIP2.check,
+        );
+
+        // CRC-64 reflected
+        let checksum1 = checksum_with_params(CRC64_NVME, "1234".as_ref());
+        let checksum2 = checksum_with_params(CRC64_NVME, "56789".as_ref());
+        assert_eq!(
+            checksum_combine_with_custom_params(CRC64_NVME, checksum1, checksum2, 5),
+            CRC64_NVME.check,
+        );
+
+        // CRC-64 forward
+        let checksum1 = checksum_with_params(CRC64_ECMA_182, "1234".as_ref());
+        let checksum2 = checksum_with_params(CRC64_ECMA_182, "56789".as_ref());
+        assert_eq!(
+            checksum_combine_with_custom_params(CRC64_ECMA_182, checksum1, checksum2, 5),
+            CRC64_ECMA_182.check,
+        );
     }
 
     #[test]
