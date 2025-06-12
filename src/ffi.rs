@@ -343,7 +343,7 @@ pub extern "C" fn crc_fast_get_custom_params(
     };
 
     // Get the custom params from the library
-    let params = crate::get_custom_params(
+    let params = CrcParams::new(
         // We need to use a static string for the name field
         Box::leak(name.to_string().into_boxed_str()),
         width,

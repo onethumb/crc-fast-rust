@@ -507,42 +507,6 @@ pub fn checksum_combine_with_custom_params(
     combine::checksums(checksum1, checksum2, checksum2_len, params)
 }
 
-/// Returns the custom CRC parameters for a given set of Rocksoft CRC parameters.
-///
-/// Does not support mis-matched refin/refout parameters, so both must be true or both false.
-///
-/// Rocksoft parameters for lots of variants: https://reveng.sourceforge.io/crc-catalogue/all.htm
-pub fn get_custom_params(
-    name: &'static str,
-    width: u8,
-    poly: u64,
-    init: u64,
-    reflected: bool,
-    xorout: u64,
-    check: u64,
-) -> CrcParams {
-    let keys = generate::keys(width, poly, reflected);
-
-    let algorithm = match width {
-        32 => CrcAlgorithm::Crc32Custom,
-        64 => CrcAlgorithm::Crc64Custom,
-        _ => panic!("Unsupported width: {}", width),
-    };
-
-    CrcParams {
-        algorithm,
-        name,
-        width,
-        poly,
-        init,
-        refin: reflected,
-        refout: reflected,
-        xorout,
-        check,
-        keys,
-    }
-}
-
 /// Returns the target used to calculate the CRC checksum for the specified algorithm.
 ///
 /// These strings are informational only, not stable, and shouldn't be relied on to match across
@@ -569,7 +533,7 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
         CrcAlgorithm::Crc32CdRomEdc => (Calculator::calculate as CalculatorFn, CRC32_CD_ROM_EDC),
         CrcAlgorithm::Crc32Cksum => (Calculator::calculate as CalculatorFn, CRC32_CKSUM),
         CrcAlgorithm::Crc32Custom => {
-            panic!("Custom CRC-32 requires parameters via get_custom_params()")
+            panic!("Custom CRC-32 requires parameters via CrcParams::new()")
         }
         CrcAlgorithm::Crc32Iscsi => (crc32_iscsi_calculator as CalculatorFn, CRC32_ISCSI),
         CrcAlgorithm::Crc32IsoHdlc => (crc32_iso_hdlc_calculator as CalculatorFn, CRC32_ISO_HDLC),
@@ -578,7 +542,7 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
         CrcAlgorithm::Crc32Mpeg2 => (Calculator::calculate as CalculatorFn, CRC32_MPEG_2),
         CrcAlgorithm::Crc32Xfer => (Calculator::calculate as CalculatorFn, CRC32_XFER),
         CrcAlgorithm::Crc64Custom => {
-            panic!("Custom CRC-64 requires parameters via get_custom_params()")
+            panic!("Custom CRC-64 requires parameters via CrcParams::new()")
         }
         CrcAlgorithm::Crc64Ecma182 => (Calculator::calculate as CalculatorFn, CRC64_ECMA_182),
         CrcAlgorithm::Crc64GoIso => (Calculator::calculate as CalculatorFn, CRC64_GO_ISO),
@@ -658,59 +622,49 @@ mod lib {
     fn test_checksum_with_custom_params() {
         // CRC-32 reflected
         assert_eq!(
-            checksum_with_params(CRC32_ISCSI, TEST_CHECK_STRING),
+            checksum_with_params(get_custom_crc32_reflected(), TEST_CHECK_STRING),
             CRC32_ISCSI.check,
         );
 
         // CRC-32 forward
         assert_eq!(
-            checksum_with_params(CRC32_BZIP2, TEST_CHECK_STRING),
+            checksum_with_params(get_custom_crc32_forward(), TEST_CHECK_STRING),
             CRC32_BZIP2.check,
         );
 
         // CRC-64 reflected
         assert_eq!(
-            checksum_with_params(CRC64_NVME, TEST_CHECK_STRING),
+            checksum_with_params(get_custom_crc64_reflected(), TEST_CHECK_STRING),
             CRC64_NVME.check,
         );
 
         // CRC-64 forward
         assert_eq!(
-            checksum_with_params(CRC64_ECMA_182, TEST_CHECK_STRING),
+            checksum_with_params(get_custom_crc64_forward(), TEST_CHECK_STRING),
             CRC64_ECMA_182.check,
         );
     }
 
     #[test]
     fn test_get_custom_params() {
-        let custom_crc32 = get_custom_params(
-            "Custom CRC-32/ISCSI",
-            32,
-            CRC32_ISCSI.poly,
-            CRC32_ISCSI.init,
-            CRC32_ISCSI.refin,
-            CRC32_ISCSI.xorout,
+        assert_eq!(
+            checksum_with_params(get_custom_crc32_reflected(), TEST_CHECK_STRING),
             CRC32_ISCSI.check,
         );
 
         assert_eq!(
-            checksum_with_params(custom_crc32, TEST_CHECK_STRING),
-            CRC32_ISCSI.check,
+            checksum_with_params(get_custom_crc32_forward(), TEST_CHECK_STRING),
+            CRC32_BZIP2.check,
         );
 
-        let custom_crc64 = get_custom_params(
-            "Custom CRC-64/NVME",
-            64,
-            CRC64_NVME.poly,
-            CRC64_NVME.init,
-            CRC64_NVME.refin,
-            CRC64_NVME.xorout,
+        assert_eq!(
+            checksum_with_params(get_custom_crc64_reflected(), TEST_CHECK_STRING),
             CRC64_NVME.check,
         );
 
         assert_eq!(
-            checksum_with_params(custom_crc64, TEST_CHECK_STRING),
-            CRC64_NVME.check,
+            checksum_with_params(get_custom_crc64_forward(), TEST_CHECK_STRING),
+            CRC64_ECMA_182.check,
         );
     }
 
@@ -724,17 +678,26 @@ mod lib {
     #[test]
     fn test_digest_updates_check_with_custom_params() {
         // CRC-32 reflected
-        check_digest(Digest::new_with_params(CRC32_ISCSI), CRC32_ISCSI.check);
+        check_digest(
+            Digest::new_with_params(get_custom_crc32_reflected()),
+            CRC32_ISCSI.check,
+        );
 
         // CRC-32 forward
-        check_digest(Digest::new_with_params(CRC32_BZIP2), CRC32_BZIP2.check);
+        check_digest(
+            Digest::new_with_params(get_custom_crc32_forward()),
+            CRC32_BZIP2.check,
+        );
 
         // CRC-64 reflected
-        check_digest(Digest::new_with_params(CRC64_NVME), CRC64_NVME.check);
+        check_digest(
+            Digest::new_with_params(get_custom_crc64_reflected()),
+            CRC64_NVME.check,
+        );
 
         // CRC-64 forward
         check_digest(
-            Digest::new_with_params(CRC64_ECMA_182),
+            Digest::new_with_params(get_custom_crc64_forward()),
             CRC64_ECMA_182.check,
         );
     }
@@ -825,34 +788,38 @@ mod lib {
     #[test]
     fn test_combine_with_custom_params() {
         // CRC-32 reflected
-        let checksum1 = checksum_with_params(CRC32_ISCSI, "1234".as_ref());
-        let checksum2 = checksum_with_params(CRC32_ISCSI, "56789".as_ref());
+        let crc32_params = get_custom_crc32_reflected();
+        let checksum1 = checksum_with_params(crc32_params, "1234".as_ref());
+        let checksum2 = checksum_with_params(crc32_params, "56789".as_ref());
         assert_eq!(
-            checksum_combine_with_custom_params(CRC32_ISCSI, checksum1, checksum2, 5),
+            checksum_combine_with_custom_params(crc32_params, checksum1, checksum2, 5),
             CRC32_ISCSI.check,
         );
 
         // CRC-32 forward
-        let checksum1 = checksum_with_params(CRC32_BZIP2, "1234".as_ref());
-        let checksum2 = checksum_with_params(CRC32_BZIP2, "56789".as_ref());
+        let crc32_params = get_custom_crc32_forward();
+        let checksum1 = checksum_with_params(crc32_params, "1234".as_ref());
+        let checksum2 = checksum_with_params(crc32_params, "56789".as_ref());
         assert_eq!(
-            checksum_combine_with_custom_params(CRC32_BZIP2, checksum1, checksum2, 5),
+            checksum_combine_with_custom_params(crc32_params, checksum1, checksum2, 5),
             CRC32_BZIP2.check,
         );
 
         // CRC-64 reflected
-        let checksum1 = checksum_with_params(CRC64_NVME, "1234".as_ref());
-        let checksum2 = checksum_with_params(CRC64_NVME, "56789".as_ref());
+        let crc64_params = get_custom_crc64_reflected();
+        let checksum1 = checksum_with_params(crc64_params, "1234".as_ref());
+        let checksum2 = checksum_with_params(crc64_params, "56789".as_ref());
         assert_eq!(
-            checksum_combine_with_custom_params(CRC64_NVME, checksum1, checksum2, 5),
+            checksum_combine_with_custom_params(crc64_params, checksum1, checksum2, 5),
             CRC64_NVME.check,
         );
 
         // CRC-64 forward
-        let checksum1 = checksum_with_params(CRC64_ECMA_182, "1234".as_ref());
-        let checksum2 = checksum_with_params(CRC64_ECMA_182, "56789".as_ref());
+        let crc64_params = get_custom_crc64_forward();
+        let checksum1 = checksum_with_params(crc64_params, "1234".as_ref());
+        let checksum2 = checksum_with_params(crc64_params, "56789".as_ref());
         assert_eq!(
-            checksum_combine_with_custom_params(CRC64_ECMA_182, checksum1, checksum2, 5),
+            checksum_combine_with_custom_params(crc64_params, checksum1, checksum2, 5),
             CRC64_ECMA_182.check,
         );
     }
@@ -886,16 +853,32 @@ mod lib {
         }
 
         // CRC-32 reflected
-        check_file(CRC32_ISCSI, test_file_path, CRC32_ISCSI.check);
+        check_file(
+            get_custom_crc32_reflected(),
+            test_file_path,
+            CRC32_ISCSI.check,
+        );
 
         // CRC-32 forward
-        check_file(CRC32_BZIP2, test_file_path, CRC32_BZIP2.check);
+        check_file(
+            get_custom_crc32_forward(),
+            test_file_path,
+            CRC32_BZIP2.check,
+        );
 
         // CRC-64 reflected
-        check_file(CRC64_NVME, test_file_path, CRC64_NVME.check);
+        check_file(
+            get_custom_crc64_reflected(),
+            test_file_path,
+            CRC64_NVME.check,
+        );
 
         // CRC-64 forward
-        check_file(CRC64_ECMA_182, test_file_path, CRC64_ECMA_182.check);
+        check_file(
+            get_custom_crc64_forward(),
+            test_file_path,
+            CRC64_ECMA_182.check,
+        );
 
         std::fs::remove_file(test_file_path).unwrap();
     }
@@ -1057,5 +1040,53 @@ mod lib {
         }
 
         Ok(())
+    }
+
+    fn get_custom_crc32_reflected() -> CrcParams {
+        CrcParams::new(
+            "Custom CRC-32/ISCSI",
+            32,
+            CRC32_ISCSI.poly,
+            CRC32_ISCSI.init,
+            CRC32_ISCSI.refin,
+            CRC32_ISCSI.xorout,
+            CRC32_ISCSI.check,
+        )
+    }
+
+    fn get_custom_crc32_forward() -> CrcParams {
+        CrcParams::new(
+            "Custom CRC-32/BZIP2",
+            32,
+            CRC32_BZIP2.poly,
+            CRC32_BZIP2.init,
+            CRC32_BZIP2.refin,
+            CRC32_BZIP2.xorout,
+            CRC32_BZIP2.check,
+        )
+    }
+
+    fn get_custom_crc64_reflected() -> CrcParams {
+        CrcParams::new(
+            "Custom CRC-64/NVME",
+            64,
+            CRC64_NVME.poly,
+            CRC64_NVME.init,
+            CRC64_NVME.refin,
+            CRC64_NVME.xorout,
+            CRC64_NVME.check,
+        )
+    }
+
+    fn get_custom_crc64_forward() -> CrcParams {
+        CrcParams::new(
+            "Custom CRC-64/ECMA-182",
+            64,
+            CRC64_ECMA_182.poly,
+            CRC64_ECMA_182.init,
+            CRC64_ECMA_182.refin,
+            CRC64_ECMA_182.xorout,
+            CRC64_ECMA_182.check,
+        )
     }
 }
