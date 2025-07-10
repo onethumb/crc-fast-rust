@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Create cache module with core data structures
+- [x] 1. Create cache module with core data structures
   - Create `src/cache.rs` module file
   - Define `CrcParamsCacheKey` struct with `width`, `poly`, and `reflected` fields
   - Implement `Debug`, `Clone`, `PartialEq`, `Eq`, and `Hash` traits for the cache key

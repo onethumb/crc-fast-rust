@@ -124,6 +124,7 @@ use std::io::{Read, Write};
 
 mod algorithm;
 mod arch;
+mod cache;
 mod combine;
 mod consts;
 mod crc32;
