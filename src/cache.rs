@@ -668,6 +668,385 @@ mod tests {
             "Cache should still work correctly after concurrent operations");
     }
 
+    // Integration tests for CrcParams compatibility
+    #[test]
+    fn test_crc_params_new_behavior_unchanged() {
+        use crate::CrcParams;
+        
+        clear_cache();
+        
+        // Test that CrcParams::new() creates identical instances regardless of caching
+        let params1 = CrcParams::new("TEST_CRC32", 32, 0x04C11DB7, 0xFFFFFFFF, true, 0xFFFFFFFF, 0xCBF43926);
+        let params2 = CrcParams::new("TEST_CRC32", 32, 0x04C11DB7, 0xFFFFFFFF, true, 0xFFFFFFFF, 0xCBF43926);
+        
+        // All fields should be identical
+        assert_eq!(params1.name, params2.name);
+        assert_eq!(params1.width, params2.width);
+        assert_eq!(params1.poly, params2.poly);
+        assert_eq!(params1.init, params2.init);
+        assert_eq!(params1.refin, params2.refin);
+        assert_eq!(params1.refout, params2.refout);
+        assert_eq!(params1.xorout, params2.xorout);
+        assert_eq!(params1.check, params2.check);
+        assert_eq!(params1.keys, params2.keys);
+        
+        // Test CRC64 parameters as well
+        let params64_1 = CrcParams::new("TEST_CRC64", 64, 0x42F0E1EBA9EA3693, 0xFFFFFFFFFFFFFFFF, false, 0x0, 0x6C40DF5F0B497347);
+        let params64_2 = CrcParams::new("TEST_CRC64", 64, 0x42F0E1EBA9EA3693, 0xFFFFFFFFFFFFFFFF, false, 0x0, 0x6C40DF5F0B497347);
+        
+        assert_eq!(params64_1.name, params64_2.name);
+        assert_eq!(params64_1.width, params64_2.width);
+        assert_eq!(params64_1.poly, params64_2.poly);
+        assert_eq!(params64_1.init, params64_2.init);
+        assert_eq!(params64_1.refin, params64_2.refin);
+        assert_eq!(params64_1.refout, params64_2.refout);
+        assert_eq!(params64_1.xorout, params64_2.xorout);
+        assert_eq!(params64_1.check, params64_2.check);
+        assert_eq!(params64_1.keys, params64_2.keys);
+    }
+
+    #[test]
+    fn test_existing_crc_parameter_combinations() {
+        use crate::test::consts::TEST_ALL_CONFIGS;
+        
+        clear_cache();
+        
+        // Test all existing CRC parameter combinations work correctly with caching
+        for config in TEST_ALL_CONFIGS {
+            let params = crate::CrcParams::new(
+                config.get_name(),
+                config.get_width(),
+                config.get_poly(),
+                config.get_init(),
+                config.get_refin(),
+                config.get_xorout(),
+                config.get_check(),
+            );
+            
+            // Verify the parameters are set correctly
+            assert_eq!(params.name, config.get_name());
+            assert_eq!(params.width, config.get_width());
+            assert_eq!(params.poly, config.get_poly());
+            assert_eq!(params.init, config.get_init());
+            assert_eq!(params.refin, config.get_refin());
+            assert_eq!(params.refout, config.get_refin());
+            assert_eq!(params.xorout, config.get_xorout());
+            assert_eq!(params.check, config.get_check());
+            
+            // Verify keys are correct by comparing with expected keys
+            let expected_keys = config.get_keys();
+            assert_eq!(params.keys, expected_keys, 
+                "Keys mismatch for {}: expected {:?}, got {:?}", 
+                config.get_name(), expected_keys, params.keys);
+        }
+    }
+
+    #[test]
+    fn test_cached_vs_uncached_results_identical() {
+        clear_cache();
+        
+        // Test parameters that affect key generation
+        let test_cases = [
+            (32, 0x04C11DB7, true),   // CRC32 reflected
+            (32, 0x04C11DB7, false),  // CRC32 non-reflected
+            (32, 0x1EDC6F41, true),   // CRC32C
+            (64, 0x42F0E1EBA9EA3693, true),  // CRC64 ISO reflected
+            (64, 0x42F0E1EBA9EA3693, false), // CRC64 ISO non-reflected
+            (64, 0xD800000000000000, true),  // CRC64 ECMA
+        ];
+        
+        for &(width, poly, reflected) in &test_cases {
+            // Generate keys directly (uncached)
+            let uncached_keys = generate::keys(width, poly, reflected);
+            
+            // Clear cache to ensure first call is cache miss
+            clear_cache();
+            
+            // Create CrcParams instance (first call - cache miss)
+            let params1 = crate::CrcParams::new(
+                "TEST", width, poly, 0xFFFFFFFFFFFFFFFF, reflected, 0x0, 0x0
+            );
+            
+            // Create another CrcParams instance with same parameters (cache hit)
+            let params2 = crate::CrcParams::new(
+                "TEST", width, poly, 0xFFFFFFFFFFFFFFFF, reflected, 0x0, 0x0
+            );
+            
+            // All should be identical
+            assert_eq!(uncached_keys, params1.keys, 
+                "Uncached keys should match CrcParams keys for width={}, poly={:#x}, reflected={}", 
+                width, poly, reflected);
+            assert_eq!(params1.keys, params2.keys, 
+                "Cached and uncached CrcParams should have identical keys for width={}, poly={:#x}, reflected={}", 
+                width, poly, reflected);
+            assert_eq!(uncached_keys, params2.keys, 
+                "All key generation methods should produce identical results for width={}, poly={:#x}, reflected={}", 
+                width, poly, reflected);
+        }
+    }
+
+    #[test]
+    fn test_multiple_crc_params_instances_use_cached_keys() {
+        clear_cache();
+        
+        // Create multiple CrcParams instances with the same parameters
+        let width = 32;
+        let poly = 0x04C11DB7;
+        let reflected = true;
+        let init = 0xFFFFFFFF;
+        let xorout = 0xFFFFFFFF;
+        let check = 0xCBF43926;
+        
+        // First instance - should generate and cache keys
+        let params1 = crate::CrcParams::new("TEST1", width, poly, init, reflected, xorout, check);
+        
+        // Subsequent instances - should use cached keys
+        let params2 = crate::CrcParams::new("TEST2", width, poly, init, reflected, xorout, check);
+        let params3 = crate::CrcParams::new("TEST3", width, poly, init, reflected, xorout, check);
+        let params4 = crate::CrcParams::new("TEST4", width, poly, init, reflected, xorout, check);
+        
+        // All should have identical keys (proving cache is working)
+        assert_eq!(params1.keys, params2.keys, "Instance 1 and 2 should have identical keys");
+        assert_eq!(params1.keys, params3.keys, "Instance 1 and 3 should have identical keys");
+        assert_eq!(params1.keys, params4.keys, "Instance 1 and 4 should have identical keys");
+        assert_eq!(params2.keys, params3.keys, "Instance 2 and 3 should have identical keys");
+        assert_eq!(params2.keys, params4.keys, "Instance 2 and 4 should have identical keys");
+        assert_eq!(params3.keys, params4.keys, "Instance 3 and 4 should have identical keys");
+        
+        // Verify keys are mathematically correct
+        let expected_keys = generate::keys(width, poly, reflected);
+        assert_eq!(params1.keys, expected_keys, "Cached keys should be mathematically correct");
+        
+        // Test with different parameters that don't affect key generation
+        let params5 = crate::CrcParams::new("DIFFERENT_NAME", width, poly, 0x12345678, reflected, 0x87654321, 0xABCDEF);
+        assert_eq!(params1.keys, params5.keys, 
+            "Different init/xorout/check/name should not affect cached keys");
+        
+        // Test with CRC64 parameters
+        let width64 = 64;
+        let poly64 = 0x42F0E1EBA9EA3693;
+        let reflected64 = false;
+        
+        let params64_1 = crate::CrcParams::new("CRC64_1", width64, poly64, 0xFFFFFFFFFFFFFFFF, reflected64, 0x0, 0x0);
+        let params64_2 = crate::CrcParams::new("CRC64_2", width64, poly64, 0x0, reflected64, 0xFFFFFFFFFFFFFFFF, 0x12345);
+        let params64_3 = crate::CrcParams::new("CRC64_3", width64, poly64, 0x123456789ABCDEF0, reflected64, 0x0FEDCBA987654321, 0x999);
+        
+        assert_eq!(params64_1.keys, params64_2.keys, "CRC64 instances should have identical keys");
+        assert_eq!(params64_1.keys, params64_3.keys, "CRC64 instances should have identical keys");
+        
+        let expected_keys64 = generate::keys(width64, poly64, reflected64);
+        assert_eq!(params64_1.keys, expected_keys64, "CRC64 cached keys should be mathematically correct");
+    }
+
+    #[test]
+    fn test_crc_params_api_compatibility() {
+        use crate::{CrcParams, CrcAlgorithm};
+        
+        clear_cache();
+        
+        // Test that the CrcParams API remains unchanged
+        let params = CrcParams::new(
+            "API_TEST",
+            32,
+            0x04C11DB7,
+            0xFFFFFFFF,
+            true,
+            0xFFFFFFFF,
+            0xCBF43926
+        );
+        
+        // Verify all public fields are accessible and have expected types
+        let _algorithm: CrcAlgorithm = params.algorithm;
+        let _name: &'static str = params.name;
+        let _width: u8 = params.width;
+        let _poly: u64 = params.poly;
+        let _init: u64 = params.init;
+        let _refin: bool = params.refin;
+        let _refout: bool = params.refout;
+        let _xorout: u64 = params.xorout;
+        let _check: u64 = params.check;
+        let _keys: [u64; 23] = params.keys;
+        
+        // Verify the algorithm is set correctly based on width
+        match params.width {
+            32 => assert!(matches!(params.algorithm, CrcAlgorithm::Crc32Custom)),
+            64 => assert!(matches!(params.algorithm, CrcAlgorithm::Crc64Custom)),
+            _ => panic!("Unexpected width: {}", params.width),
+        }
+        
+        // Test that CrcParams can be copied and cloned
+        let params_copy = params;
+        let params_clone = params.clone();
+        
+        assert_eq!(params.keys, params_copy.keys);
+        assert_eq!(params.keys, params_clone.keys);
+        
+        // Test Debug formatting works
+        let debug_str = format!("{:?}", params);
+        assert!(debug_str.contains("CrcParams"));
+        assert!(debug_str.contains("API_TEST"));
+    }
+
+    #[test]
+    fn test_crc_params_with_all_standard_algorithms() {
+        use crate::test::consts::TEST_ALL_CONFIGS;
+        
+        clear_cache();
+        
+        // Test creating CrcParams for all standard CRC algorithms
+        for config in TEST_ALL_CONFIGS {
+            // Create CrcParams using the same parameters as the standard algorithm
+            let params = crate::CrcParams::new(
+                config.get_name(),
+                config.get_width(),
+                config.get_poly(),
+                config.get_init(),
+                config.get_refin(),
+                config.get_xorout(),
+                config.get_check(),
+            );
+            
+            // Verify the created params match the expected configuration
+            assert_eq!(params.name, config.get_name());
+            assert_eq!(params.width, config.get_width());
+            assert_eq!(params.poly, config.get_poly());
+            assert_eq!(params.init, config.get_init());
+            assert_eq!(params.refin, config.get_refin());
+            assert_eq!(params.refout, config.get_refin());
+            assert_eq!(params.xorout, config.get_xorout());
+            assert_eq!(params.check, config.get_check());
+            
+            // Most importantly, verify the keys are correct
+            assert_eq!(params.keys, config.get_keys(), 
+                "Keys should match expected values for {}", config.get_name());
+            
+            // Create a second instance to test caching
+            let params2 = crate::CrcParams::new(
+                "CACHED_VERSION",  // Different name shouldn't affect caching
+                config.get_width(),
+                config.get_poly(),
+                0x12345678,  // Different init shouldn't affect caching
+                config.get_refin(),
+                0x87654321,  // Different xorout shouldn't affect caching
+                0xABCDEF,    // Different check shouldn't affect caching
+            );
+            
+            // Keys should be identical (proving cache hit)
+            assert_eq!(params.keys, params2.keys, 
+                "Cached keys should be identical for {}", config.get_name());
+        }
+    }
+
+    #[test]
+    fn test_crc_params_edge_cases() {
+        clear_cache();
+        
+        // Test edge cases for CrcParams creation
+        
+        // Test minimum and maximum polynomial values
+        let params_min_poly = crate::CrcParams::new("MIN_POLY", 32, 0x1, 0x0, false, 0x0, 0x0);
+        let params_max_poly = crate::CrcParams::new("MAX_POLY", 32, 0xFFFFFFFF, 0x0, false, 0x0, 0x0);
+        
+        // Both should create valid instances
+        assert_eq!(params_min_poly.width, 32);
+        assert_eq!(params_min_poly.poly, 0x1);
+        assert_eq!(params_max_poly.width, 32);
+        assert_eq!(params_max_poly.poly, 0xFFFFFFFF);
+        
+        // Test both reflection modes
+        let params_reflected = crate::CrcParams::new("REFLECTED", 32, 0x04C11DB7, 0x0, true, 0x0, 0x0);
+        let params_normal = crate::CrcParams::new("NORMAL", 32, 0x04C11DB7, 0x0, false, 0x0, 0x0);
+        
+        // Should have different keys due to different reflection
+        assert_ne!(params_reflected.keys, params_normal.keys);
+        assert_eq!(params_reflected.refin, true);
+        assert_eq!(params_reflected.refout, true);
+        assert_eq!(params_normal.refin, false);
+        assert_eq!(params_normal.refout, false);
+        
+        // Test 64-bit edge cases
+        let params64_min = crate::CrcParams::new("CRC64_MIN", 64, 0x1, 0x0, false, 0x0, 0x0);
+        let params64_max = crate::CrcParams::new("CRC64_MAX", 64, 0xFFFFFFFFFFFFFFFF, 0x0, false, 0x0, 0x0);
+        
+        assert_eq!(params64_min.width, 64);
+        assert_eq!(params64_min.poly, 0x1);
+        assert_eq!(params64_max.width, 64);
+        assert_eq!(params64_max.poly, 0xFFFFFFFFFFFFFFFF);
+        
+        // Verify all instances have valid 23-element key arrays
+        assert_eq!(params_min_poly.keys.len(), 23);
+        assert_eq!(params_max_poly.keys.len(), 23);
+        assert_eq!(params_reflected.keys.len(), 23);
+        assert_eq!(params_normal.keys.len(), 23);
+        assert_eq!(params64_min.keys.len(), 23);
+        assert_eq!(params64_max.keys.len(), 23);
+    }
+
+    #[test]
+    fn test_crc_params_concurrent_creation() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        
+        clear_cache();
+        
+        let num_threads = 8;
+        let barrier = Arc::new(Barrier::new(num_threads));
+        let mut handles = Vec::new();
+        
+        // All threads create CrcParams with the same parameters simultaneously
+        for i in 0..num_threads {
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                barrier_clone.wait();
+                
+                // All threads create the same CrcParams
+                let params = crate::CrcParams::new(
+                    "CONCURRENT_TEST",
+                    32,
+                    0x04C11DB7,
+                    0xFFFFFFFF,
+                    true,
+                    0xFFFFFFFF,
+                    0xCBF43926
+                );
+                
+                (i, params)
+            });
+            handles.push(handle);
+        }
+        
+        // Collect results from all threads
+        let mut results = Vec::new();
+        for handle in handles {
+            results.push(handle.join().expect("Thread should not panic"));
+        }
+        
+        // Verify all threads completed successfully
+        assert_eq!(results.len(), num_threads);
+        
+        // Verify all CrcParams instances have identical keys
+        let first_keys = results[0].1.keys;
+        for (thread_id, params) in results {
+            assert_eq!(params.keys, first_keys, 
+                "Thread {} should have identical keys to other threads", thread_id);
+            
+            // Verify other fields are also correct
+            assert_eq!(params.name, "CONCURRENT_TEST");
+            assert_eq!(params.width, 32);
+            assert_eq!(params.poly, 0x04C11DB7);
+            assert_eq!(params.init, 0xFFFFFFFF);
+            assert_eq!(params.refin, true);
+            assert_eq!(params.refout, true);
+            assert_eq!(params.xorout, 0xFFFFFFFF);
+            assert_eq!(params.check, 0xCBF43926);
+        }
+        
+        // Verify the keys are mathematically correct
+        let expected_keys = generate::keys(32, 0x04C11DB7, true);
+        assert_eq!(first_keys, expected_keys, 
+            "All concurrent CrcParams should have correct keys");
+    }
+
     #[test]
     fn test_lock_poisoning_recovery() {
         use std::sync::{Arc, Barrier};
