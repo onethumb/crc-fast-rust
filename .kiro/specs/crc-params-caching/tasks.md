@@ -41,7 +41,7 @@
   - Test that cached keys are identical to directly generated keys
   - _Requirements: 1.1, 1.2, 3.1, 3.2_
 
-- [ ] 7. Add thread safety tests
+- [x] 7. Add thread safety tests
   - Write concurrent access tests using `std::thread`
   - Test multiple threads reading from cache simultaneously
   - Test read-write contention scenarios

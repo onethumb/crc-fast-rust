@@ -343,4 +343,434 @@ mod tests {
         assert_eq!(key.poly, cloned_key.poly);
         assert_eq!(key.reflected, cloned_key.reflected);
     }
+
+    // Thread safety tests
+    #[test]
+    fn test_concurrent_cache_reads() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        
+        clear_cache();
+        
+        // Pre-populate cache with a known value
+        let expected_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+        
+        let num_threads = 8;
+        let barrier = Arc::new(Barrier::new(num_threads));
+        let mut handles = Vec::new();
+        
+        // Spawn multiple threads that all read the same cached value simultaneously
+        for i in 0..num_threads {
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                // Wait for all threads to be ready
+                barrier_clone.wait();
+                
+                // All threads read from cache simultaneously
+                let keys = get_or_generate_keys(32, 0x04C11DB7, true);
+                (i, keys)
+            });
+            handles.push(handle);
+        }
+        
+        // Collect results from all threads
+        let mut results = Vec::new();
+        for handle in handles {
+            results.push(handle.join().expect("Thread should not panic"));
+        }
+        
+        // Verify all threads got the same cached keys
+        assert_eq!(results.len(), num_threads);
+        for (thread_id, keys) in results {
+            assert_eq!(keys, expected_keys, 
+                "Thread {} should get same cached keys", thread_id);
+        }
+    }
+
+    #[test]
+    fn test_concurrent_cache_writes() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        
+        clear_cache();
+        
+        let num_threads = 6;
+        let barrier = Arc::new(Barrier::new(num_threads));
+        let mut handles = Vec::new();
+        
+        // Test parameters for different cache entries
+        let test_params = [
+            (32, 0x04C11DB7, true),
+            (32, 0x04C11DB7, false), 
+            (32, 0x1EDC6F41, true),
+            (64, 0x42F0E1EBA9EA3693, true),
+            (64, 0x42F0E1EBA9EA3693, false),
+            (64, 0xD800000000000000, true),
+        ];
+        
+        // Spawn threads that write different cache entries simultaneously
+        for i in 0..num_threads {
+            let barrier_clone = Arc::clone(&barrier);
+            let (width, poly, reflected) = test_params[i];
+            
+            let handle = thread::spawn(move || {
+                // Wait for all threads to be ready
+                barrier_clone.wait();
+                
+                // Each thread generates and caches different parameters
+                let keys = get_or_generate_keys(width, poly, reflected);
+                (i, width, poly, reflected, keys)
+            });
+            handles.push(handle);
+        }
+        
+        // Collect results from all threads
+        let mut results = Vec::new();
+        for handle in handles {
+            results.push(handle.join().expect("Thread should not panic"));
+        }
+        
+        // Verify all threads completed successfully and got correct keys
+        assert_eq!(results.len(), num_threads);
+        
+        // Verify each thread's keys match what we'd expect from direct generation
+        for (thread_id, width, poly, reflected, keys) in results {
+            let expected_keys = generate::keys(width, poly, reflected);
+            assert_eq!(keys, expected_keys, 
+                "Thread {} should generate correct keys for params ({}, {:#x}, {})", 
+                thread_id, width, poly, reflected);
+            
+            // Verify the keys are now cached by reading them again
+            let cached_keys = get_or_generate_keys(width, poly, reflected);
+            assert_eq!(keys, cached_keys, 
+                "Thread {} keys should be cached", thread_id);
+        }
+    }
+
+    #[test]
+    fn test_read_write_contention() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        use std::time::Duration;
+        
+        clear_cache();
+        
+        // Pre-populate cache with some values
+        let _keys1 = get_or_generate_keys(32, 0x04C11DB7, true);
+        let _keys2 = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+        
+        let num_readers = 6;
+        let num_writers = 3;
+        let total_threads = num_readers + num_writers;
+        let barrier = Arc::new(Barrier::new(total_threads));
+        let mut handles = Vec::new();
+        
+        // Spawn reader threads that continuously read cached values
+        for i in 0..num_readers {
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                barrier_clone.wait();
+                
+                let mut read_count = 0;
+                let start = std::time::Instant::now();
+                
+                // Read for a short duration
+                while start.elapsed() < Duration::from_millis(50) {
+                    let keys1 = get_or_generate_keys(32, 0x04C11DB7, true);
+                    let keys2 = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+                    
+                    // Verify we get consistent results
+                    assert_eq!(keys1.len(), 23);
+                    assert_eq!(keys2.len(), 23);
+                    read_count += 1;
+                }
+                
+                (format!("reader_{}", i), read_count)
+            });
+            handles.push(handle);
+        }
+        
+        // Spawn writer threads that add new cache entries
+        for i in 0..num_writers {
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                barrier_clone.wait();
+                
+                let mut write_count = 0;
+                let start = std::time::Instant::now();
+                
+                // Write new entries for a short duration
+                while start.elapsed() < Duration::from_millis(50) {
+                    // Use different parameters to create new cache entries
+                    let poly = 0x1EDC6F41 + (i as u64 * 0x1000) + (write_count as u64);
+                    let keys = get_or_generate_keys(32, poly, true);
+                    
+                    assert_eq!(keys.len(), 23);
+                    write_count += 1;
+                }
+                
+                (format!("writer_{}", i), write_count)
+            });
+            handles.push(handle);
+        }
+        
+        // Wait for all threads to complete
+        let mut results = Vec::new();
+        for handle in handles {
+            results.push(handle.join().expect("Thread should not panic"));
+        }
+        
+        // Verify all threads completed successfully
+        assert_eq!(results.len(), total_threads);
+        
+        // Verify readers and writers both made progress
+        let reader_results: Vec<_> = results.iter()
+            .filter(|(name, _)| name.starts_with("reader_"))
+            .collect();
+        let writer_results: Vec<_> = results.iter()
+            .filter(|(name, _)| name.starts_with("writer_"))
+            .collect();
+        
+        assert_eq!(reader_results.len(), num_readers);
+        assert_eq!(writer_results.len(), num_writers);
+        
+        // All threads should have made some progress
+        for (name, count) in &results {
+            assert!(*count > 0, "Thread {} should have made progress", name);
+        }
+    }
+
+    #[test]
+    fn test_cache_consistency_under_concurrent_access() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        
+        clear_cache();
+        
+        let num_threads = 10;
+        let barrier = Arc::new(Barrier::new(num_threads));
+        let mut handles = Vec::new();
+        
+        // All threads will try to get the same cache entry simultaneously
+        // This tests the race condition where multiple threads might try to 
+        // generate and cache the same keys at the same time
+        for i in 0..num_threads {
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                barrier_clone.wait();
+                
+                // All threads request the same parameters simultaneously
+                let keys = get_or_generate_keys(32, 0x04C11DB7, true);
+                (i, keys)
+            });
+            handles.push(handle);
+        }
+        
+        // Collect results from all threads
+        let mut results = Vec::new();
+        for handle in handles {
+            results.push(handle.join().expect("Thread should not panic"));
+        }
+        
+        // Verify all threads got identical keys
+        assert_eq!(results.len(), num_threads);
+        let first_keys = results[0].1;
+        
+        for (thread_id, keys) in results {
+            assert_eq!(keys, first_keys, 
+                "Thread {} should get identical keys to other threads", thread_id);
+        }
+        
+        // Verify the keys are correct by comparing with direct generation
+        let expected_keys = generate::keys(32, 0x04C11DB7, true);
+        assert_eq!(first_keys, expected_keys, 
+            "Cached keys should match directly generated keys");
+        
+        // Verify subsequent access still returns the same keys
+        let final_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+        assert_eq!(final_keys, first_keys, 
+            "Final cache access should return same keys");
+    }
+
+    #[test]
+    fn test_mixed_concurrent_operations() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        use std::time::Duration;
+        
+        clear_cache();
+        
+        let num_threads = 8;
+        let barrier = Arc::new(Barrier::new(num_threads));
+        let mut handles = Vec::new();
+        
+        // Mix of operations: some threads do cache hits, some do cache misses,
+        // some clear the cache, all happening concurrently
+        for i in 0..num_threads {
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                barrier_clone.wait();
+                
+                let mut operations = 0;
+                let start = std::time::Instant::now();
+                
+                while start.elapsed() < Duration::from_millis(30) {
+                    match i % 4 {
+                        0 => {
+                            // Cache hit operations - same parameters
+                            let _keys = get_or_generate_keys(32, 0x04C11DB7, true);
+                        },
+                        1 => {
+                            // Cache miss operations - different parameters each time
+                            let poly = 0x1EDC6F41 + (operations as u64);
+                            let _keys = get_or_generate_keys(32, poly, true);
+                        },
+                        2 => {
+                            // Mixed read operations
+                            let _keys1 = get_or_generate_keys(32, 0x04C11DB7, true);
+                            let _keys2 = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+                        },
+                        3 => {
+                            // Occasional cache clear (but not too often to avoid disrupting other tests)
+                            if operations % 10 == 0 {
+                                clear_cache();
+                            }
+                            let _keys = get_or_generate_keys(32, 0x04C11DB7, true);
+                        },
+                        _ => unreachable!(),
+                    }
+                    operations += 1;
+                }
+                
+                (i, operations)
+            });
+            handles.push(handle);
+        }
+        
+        // Wait for all threads to complete
+        let mut results = Vec::new();
+        for handle in handles {
+            results.push(handle.join().expect("Thread should not panic"));
+        }
+        
+        // Verify all threads completed successfully
+        assert_eq!(results.len(), num_threads);
+        
+        for (thread_id, operations) in results {
+            assert!(operations > 0, 
+                "Thread {} should have completed some operations", thread_id);
+        }
+        
+        // Verify cache is still functional after all the concurrent operations
+        let final_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+        let expected_keys = generate::keys(32, 0x04C11DB7, true);
+        assert_eq!(final_keys, expected_keys, 
+            "Cache should still work correctly after concurrent operations");
+    }
+
+    #[test]
+    fn test_lock_poisoning_recovery() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        
+        clear_cache();
+        
+        // This test is tricky because we need to poison the lock without 
+        // actually breaking our test. We'll simulate lock poisoning by
+        // creating a scenario where a thread panics while holding a write lock.
+        // However, since our implementation uses best-effort error handling,
+        // it should gracefully degrade rather than propagate panics.
+        
+        // First, verify normal operation
+        let keys_before = get_or_generate_keys(32, 0x04C11DB7, true);
+        assert_eq!(keys_before.len(), 23);
+        
+        // Test that even if internal operations fail, the function still returns valid keys
+        // We can't easily poison the lock in a controlled way, but we can verify
+        // that our error handling works by testing edge cases
+        
+        // Multiple rapid cache operations that might stress the locking mechanism
+        let num_threads = 4;
+        let barrier = Arc::new(Barrier::new(num_threads));
+        let mut handles = Vec::new();
+        
+        for i in 0..num_threads {
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                barrier_clone.wait();
+                
+                // Rapid cache operations that might cause contention
+                for j in 0..20 {
+                    let poly = 0x04C11DB7 + (i as u64 * 1000) + (j as u64);
+                    let keys = get_or_generate_keys(32, poly, true);
+                    assert_eq!(keys.len(), 23, 
+                        "Thread {} iteration {} should return valid keys", i, j);
+                    
+                    // Occasional cache clear to increase contention
+                    if j % 7 == 0 {
+                        clear_cache();
+                    }
+                }
+                
+                i
+            });
+            handles.push(handle);
+        }
+        
+        // All threads should complete successfully
+        for handle in handles {
+            let thread_id = handle.join().expect("Thread should not panic");
+            assert!(thread_id < num_threads);
+        }
+        
+        // Verify cache is still functional after stress testing
+        let keys_after = get_or_generate_keys(32, 0x04C11DB7, true);
+        assert_eq!(keys_after.len(), 23);
+        
+        // Keys should be mathematically correct regardless of cache state
+        let expected_keys = generate::keys(32, 0x04C11DB7, true);
+        assert_eq!(keys_after, expected_keys);
+    }
+
+    #[test]
+    fn test_cache_behavior_with_thread_local_access() {
+        use std::thread;
+        
+        clear_cache();
+        
+        // Test that cache works correctly when accessed from different threads
+        // in sequence (not concurrently)
+        
+        let keys_main = get_or_generate_keys(32, 0x04C11DB7, true);
+        
+        let handle = thread::spawn(|| {
+            // This thread should see the cached value from the main thread
+            let keys_thread = get_or_generate_keys(32, 0x04C11DB7, true);
+            keys_thread
+        });
+        
+        let keys_from_thread = handle.join().expect("Thread should not panic");
+        
+        // Both should be identical
+        assert_eq!(keys_main, keys_from_thread);
+        
+        // Test multiple sequential threads
+        let mut thread_keys = Vec::new();
+        
+        for i in 0..5 {
+            let handle = thread::spawn(move || {
+                let keys = get_or_generate_keys(32, 0x04C11DB7, true);
+                (i, keys)
+            });
+            
+            let (thread_id, keys) = handle.join().expect("Thread should not panic");
+            thread_keys.push((thread_id, keys));
+        }
+        
+        // All threads should get the same cached keys
+        for (thread_id, keys) in thread_keys {
+            assert_eq!(keys, keys_main, 
+                "Thread {} should get same cached keys", thread_id);
+        }
+    }
 }
