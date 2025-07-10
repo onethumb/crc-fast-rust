@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 
 use crate::traits::{CrcCalculator, CrcWidth};
-use crate::{arch, generate, CrcAlgorithm, CrcParams};
+use crate::{arch, cache, CrcAlgorithm, CrcParams};
 
 /// CRC-32 width implementation
 #[derive(Clone, Copy)]
@@ -57,7 +57,7 @@ impl CrcParams {
         xorout: u64,
         check: u64,
     ) -> Self {
-        let keys = generate::keys(width, poly, reflected);
+        let keys = cache::get_or_generate_keys(width, poly, reflected);
 
         let algorithm = match width {
             32 => CrcAlgorithm::Crc32Custom,
