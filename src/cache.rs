@@ -86,6 +86,204 @@ pub fn clear_cache() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_cache_key_creation() {
+        let key1 = CrcParamsCacheKey::new(32, 0x04C11DB7, true);
+        let key2 = CrcParamsCacheKey::new(64, 0x42F0E1EBA9EA3693, false);
+        
+        assert_eq!(key1.width, 32);
+        assert_eq!(key1.poly, 0x04C11DB7);
+        assert_eq!(key1.reflected, true);
+        
+        assert_eq!(key2.width, 64);
+        assert_eq!(key2.poly, 0x42F0E1EBA9EA3693);
+        assert_eq!(key2.reflected, false);
+    }
+
+    #[test]
+    fn test_cache_key_equality() {
+        let key1 = CrcParamsCacheKey::new(32, 0x04C11DB7, true);
+        let key2 = CrcParamsCacheKey::new(32, 0x04C11DB7, true);
+        let key3 = CrcParamsCacheKey::new(32, 0x04C11DB7, false); // Different reflected
+        let key4 = CrcParamsCacheKey::new(64, 0x04C11DB7, true);  // Different width
+        let key5 = CrcParamsCacheKey::new(32, 0x1EDC6F41, true);  // Different poly
+        
+        // Test equality
+        assert_eq!(key1, key2);
+        assert_eq!(key1.clone(), key2.clone());
+        
+        // Test inequality
+        assert_ne!(key1, key3);
+        assert_ne!(key1, key4);
+        assert_ne!(key1, key5);
+        assert_ne!(key3, key4);
+        assert_ne!(key3, key5);
+        assert_ne!(key4, key5);
+    }
+
+    #[test]
+    fn test_cache_key_hashing() {
+        let key1 = CrcParamsCacheKey::new(32, 0x04C11DB7, true);
+        let key2 = CrcParamsCacheKey::new(32, 0x04C11DB7, true);
+        let key3 = CrcParamsCacheKey::new(32, 0x04C11DB7, false);
+        
+        // Create a HashSet to test that keys can be used as hash keys
+        let mut set = HashSet::new();
+        set.insert(key1.clone());
+        set.insert(key2.clone());
+        set.insert(key3.clone());
+        
+        // Should only have 2 unique keys (key1 and key2 are equal)
+        assert_eq!(set.len(), 2);
+        
+        // Test that equal keys can be found in the set
+        assert!(set.contains(&key1));
+        assert!(set.contains(&key2));
+        assert!(set.contains(&key3));
+        
+        // Test that a new equivalent key can be found
+        let key4 = CrcParamsCacheKey::new(32, 0x04C11DB7, true);
+        assert!(set.contains(&key4));
+    }
+
+    #[test]
+    fn test_cache_hit_scenarios() {
+        clear_cache();
+        
+        // First call should be a cache miss and generate keys
+        let keys1 = get_or_generate_keys(32, 0x04C11DB7, true);
+        
+        // Second call with same parameters should be a cache hit
+        let keys2 = get_or_generate_keys(32, 0x04C11DB7, true);
+        
+        // Keys should be identical (same array contents)
+        assert_eq!(keys1, keys2);
+        
+        // Test multiple cache hits
+        let keys3 = get_or_generate_keys(32, 0x04C11DB7, true);
+        let keys4 = get_or_generate_keys(32, 0x04C11DB7, true);
+        
+        assert_eq!(keys1, keys3);
+        assert_eq!(keys1, keys4);
+        assert_eq!(keys2, keys3);
+        assert_eq!(keys2, keys4);
+    }
+
+    #[test]
+    fn test_cache_miss_scenarios() {
+        clear_cache();
+        
+        // Different width - should be cache miss
+        let keys_32 = get_or_generate_keys(32, 0x04C11DB7, true);
+        let keys_64 = get_or_generate_keys(64, 0x04C11DB7, true);
+        assert_ne!(keys_32, keys_64);
+        
+        // Different poly - should be cache miss
+        let keys_poly1 = get_or_generate_keys(32, 0x04C11DB7, true);
+        let keys_poly2 = get_or_generate_keys(32, 0x1EDC6F41, true);
+        assert_ne!(keys_poly1, keys_poly2);
+        
+        // Different reflected - should be cache miss
+        let keys_refl_true = get_or_generate_keys(32, 0x04C11DB7, true);
+        let keys_refl_false = get_or_generate_keys(32, 0x04C11DB7, false);
+        assert_ne!(keys_refl_true, keys_refl_false);
+        
+        // Verify each parameter set is cached independently
+        let keys_32_again = get_or_generate_keys(32, 0x04C11DB7, true);
+        let keys_64_again = get_or_generate_keys(64, 0x04C11DB7, true);
+        let keys_poly1_again = get_or_generate_keys(32, 0x04C11DB7, true);
+        let keys_poly2_again = get_or_generate_keys(32, 0x1EDC6F41, true);
+        let keys_refl_true_again = get_or_generate_keys(32, 0x04C11DB7, true);
+        let keys_refl_false_again = get_or_generate_keys(32, 0x04C11DB7, false);
+        
+        assert_eq!(keys_32, keys_32_again);
+        assert_eq!(keys_64, keys_64_again);
+        assert_eq!(keys_poly1, keys_poly1_again);
+        assert_eq!(keys_poly2, keys_poly2_again);
+        assert_eq!(keys_refl_true, keys_refl_true_again);
+        assert_eq!(keys_refl_false, keys_refl_false_again);
+    }
+
+    #[test]
+    fn test_cached_keys_identical_to_generated_keys() {
+        clear_cache();
+        
+        // Test CRC32 parameters
+        let width = 32;
+        let poly = 0x04C11DB7;
+        let reflected = true;
+        
+        // Generate keys directly (bypassing cache)
+        let direct_keys = generate::keys(width, poly, reflected);
+        
+        // Get keys through cache (first call will be cache miss, generates and caches)
+        let cached_keys_first = get_or_generate_keys(width, poly, reflected);
+        
+        // Get keys through cache again (should be cache hit)
+        let cached_keys_second = get_or_generate_keys(width, poly, reflected);
+        
+        // All should be identical
+        assert_eq!(direct_keys, cached_keys_first);
+        assert_eq!(direct_keys, cached_keys_second);
+        assert_eq!(cached_keys_first, cached_keys_second);
+        
+        // Test CRC64 parameters
+        let width64 = 64;
+        let poly64 = 0x42F0E1EBA9EA3693;
+        let reflected64 = false;
+        
+        let direct_keys64 = generate::keys(width64, poly64, reflected64);
+        let cached_keys64_first = get_or_generate_keys(width64, poly64, reflected64);
+        let cached_keys64_second = get_or_generate_keys(width64, poly64, reflected64);
+        
+        assert_eq!(direct_keys64, cached_keys64_first);
+        assert_eq!(direct_keys64, cached_keys64_second);
+        assert_eq!(cached_keys64_first, cached_keys64_second);
+        
+        // Verify different parameters produce different keys
+        assert_ne!(direct_keys, direct_keys64);
+        assert_ne!(cached_keys_first, cached_keys64_first);
+    }
+
+    #[test]
+    fn test_multiple_parameter_combinations() {
+        clear_cache();
+        
+        // Test various common CRC parameter combinations
+        let test_cases = [
+            (32, 0x04C11DB7, true),   // CRC32
+            (32, 0x04C11DB7, false),  // CRC32 non-reflected
+            (32, 0x1EDC6F41, true),   // CRC32C
+            (64, 0x42F0E1EBA9EA3693, true),  // CRC64 ISO
+            (64, 0x42F0E1EBA9EA3693, false), // CRC64 ISO non-reflected
+            (64, 0xD800000000000000, true),  // CRC64 ECMA
+        ];
+        
+        let mut all_keys = Vec::new();
+        
+        // Generate keys for all test cases
+        for &(width, poly, reflected) in &test_cases {
+            let keys = get_or_generate_keys(width, poly, reflected);
+            all_keys.push(keys);
+        }
+        
+        // Verify all keys are different (no collisions)
+        for i in 0..all_keys.len() {
+            for j in (i + 1)..all_keys.len() {
+                assert_ne!(all_keys[i], all_keys[j], 
+                    "Keys should be different for test cases {} and {}", i, j);
+            }
+        }
+        
+        // Verify cache hits return same keys
+        for (i, &(width, poly, reflected)) in test_cases.iter().enumerate() {
+            let cached_keys = get_or_generate_keys(width, poly, reflected);
+            assert_eq!(all_keys[i], cached_keys, 
+                "Cache hit should return same keys for test case {}", i);
+        }
+    }
 
     #[test]
     fn test_cache_management_utilities() {
@@ -125,5 +323,24 @@ mod tests {
         
         // Keys should be identical (same parameters produce same keys)
         assert_eq!(keys, keys2);
+    }
+
+    #[test]
+    fn test_cache_key_debug_and_clone() {
+        let key = CrcParamsCacheKey::new(32, 0x04C11DB7, true);
+        
+        // Test Debug trait
+        let debug_str = format!("{:?}", key);
+        assert!(debug_str.contains("CrcParamsCacheKey"));
+        assert!(debug_str.contains("32"));
+        assert!(debug_str.contains("0x4c11db7") || debug_str.contains("79764919"));
+        assert!(debug_str.contains("true"));
+        
+        // Test Clone trait
+        let cloned_key = key.clone();
+        assert_eq!(key, cloned_key);
+        assert_eq!(key.width, cloned_key.width);
+        assert_eq!(key.poly, cloned_key.poly);
+        assert_eq!(key.reflected, cloned_key.reflected);
     }
 }
