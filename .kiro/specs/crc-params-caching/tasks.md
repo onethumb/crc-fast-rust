@@ -7,7 +7,7 @@
   - Add module declaration to `src/lib.rs`
   - _Requirements: 1.1, 3.1, 3.2_
 
-- [ ] 2. Implement thread-safe cache storage
+- [x] 2. Implement thread-safe cache storage
   - Define global cache using `std::sync::OnceLock<RwLock<HashMap<CrcParamsCacheKey, [u64; 23]>>>`
   - Implement `get_cache()` function to initialize and return cache reference
   - Add necessary imports for `std::collections::HashMap`, `std::sync::{OnceLock, RwLock}`
