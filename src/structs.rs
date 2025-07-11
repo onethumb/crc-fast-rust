@@ -42,8 +42,9 @@ impl CrcCalculator for Calculator {
 impl CrcParams {
     /// Creates custom CRC parameters for a given set of Rocksoft CRC parameters.
     ///
-    /// Generates the folding keys on-demand, which has a slight performance penalty. For
-    /// performance-critical applications, consider generating the keys once and reusing them.
+    /// Uses an internal cache to avoid regenerating folding keys for identical parameter sets.
+    /// The first call with a given set of parameters will generate and cache the keys, while
+    /// subsequent calls with the same parameters will use the cached keys for optimal performance.
     ///
     /// Does not support mis-matched refin/refout parameters, so both must be true or both false.
     ///
