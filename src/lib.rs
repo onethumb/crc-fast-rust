@@ -162,6 +162,63 @@ pub enum CrcAlgorithm {
     Crc64Xz,
 }
 
+/// Internal storage for CRC folding keys that can accommodate different array sizes.
+/// This enum allows future expansion to support larger folding distances while maintaining
+/// backwards compatibility with existing const definitions.
+#[derive(Clone, Copy, Debug)]
+#[allow(dead_code)] // Used in Phase 3 of migration
+enum CrcKeysStorage {
+    /// Current 23-key format for existing algorithms (supports up to 256-byte folding distances)
+    KeysFold256([u64; 23]),
+    /// Future 25-key format for potential expanded folding distances (testing purposes only)
+    KeysFutureTest([u64; 25]),
+}
+
+#[allow(dead_code)] // Used in Phase 3 of migration
+impl CrcKeysStorage {
+    /// Safe key access with bounds checking. Returns 0 for out-of-bounds indices.
+    #[inline(always)]
+    const fn get_key(self, index: usize) -> u64 {
+        match self {
+            CrcKeysStorage::KeysFold256(keys) => {
+                if index < 23 {
+                    keys[index]
+                } else {
+                    0
+                }
+            }
+            CrcKeysStorage::KeysFutureTest(keys) => {
+                if index < 25 {
+                    keys[index]
+                } else {
+                    0
+                }
+            }
+        }
+    }
+
+    /// Returns the number of keys available in this storage variant.
+    #[inline(always)]
+    const fn key_count(self) -> usize {
+        match self {
+            CrcKeysStorage::KeysFold256(_) => 23,
+            CrcKeysStorage::KeysFutureTest(_) => 25,
+        }
+    }
+
+    /// Const constructor for 23-key arrays (current format).
+    #[inline(always)]
+    const fn from_keys_fold_256(keys: [u64; 23]) -> Self {
+        CrcKeysStorage::KeysFold256(keys)
+    }
+
+    /// Const constructor for 25-key arrays (future expansion testing).
+    #[inline(always)]
+    const fn from_keys_fold_future_test(keys: [u64; 25]) -> Self {
+        CrcKeysStorage::KeysFutureTest(keys)
+    }
+}
+
 /// Parameters for CRC computation, including polynomial, initial value, and other settings.
 #[derive(Clone, Copy, Debug)]
 pub struct CrcParams {
@@ -1099,5 +1156,121 @@ mod lib {
             CRC64_ECMA_182.xorout,
             CRC64_ECMA_182.check,
         )
+    }
+
+    #[test]
+    fn test_crc_keys_storage_fold_256() {
+        let test_keys = [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+        ];
+        let storage = CrcKeysStorage::from_keys_fold_256(test_keys);
+
+        // Test valid key access
+        for i in 0..23 {
+            assert_eq!(storage.get_key(i), test_keys[i]);
+        }
+
+        // Test out-of-bounds access returns 0
+        assert_eq!(storage.get_key(23), 0);
+        assert_eq!(storage.get_key(24), 0);
+        assert_eq!(storage.get_key(100), 0);
+
+        // Test key count
+        assert_eq!(storage.key_count(), 23);
+    }
+
+    #[test]
+    fn test_crc_keys_storage_future_test() {
+        let test_keys = [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+            25,
+        ];
+        let storage = CrcKeysStorage::from_keys_fold_future_test(test_keys);
+
+        // Test valid key access
+        for i in 0..25 {
+            assert_eq!(storage.get_key(i), test_keys[i]);
+        }
+
+        // Test out-of-bounds access returns 0
+        assert_eq!(storage.get_key(25), 0);
+        assert_eq!(storage.get_key(26), 0);
+        assert_eq!(storage.get_key(100), 0);
+
+        // Test key count
+        assert_eq!(storage.key_count(), 25);
+    }
+
+    #[test]
+    fn test_crc_params_safe_accessors() {
+        // Create a test CrcParams with known keys
+        let test_keys = [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+        ];
+        let params = CrcParams {
+            algorithm: CrcAlgorithm::Crc32IsoHdlc,
+            name: "test",
+            width: 32,
+            poly: 0x04C11DB7,
+            init: 0xFFFFFFFF,
+            refin: true,
+            refout: true,
+            xorout: 0xFFFFFFFF,
+            check: 0xCBF43926,
+            keys: test_keys,
+        };
+
+        // Test valid key access
+        for i in 0..23 {
+            assert_eq!(params.get_key(i), test_keys[i]);
+            assert_eq!(params.get_key_checked(i), Some(test_keys[i]));
+        }
+
+        // Test out-of-bounds access
+        assert_eq!(params.get_key(23), 0);
+        assert_eq!(params.get_key(24), 0);
+        assert_eq!(params.get_key(100), 0);
+
+        assert_eq!(params.get_key_checked(23), None);
+        assert_eq!(params.get_key_checked(24), None);
+        assert_eq!(params.get_key_checked(100), None);
+
+        // Test key count
+        assert_eq!(params.key_count(), 23);
+    }
+
+    #[test]
+    fn test_crc_keys_storage_const_constructors() {
+        // Test that const constructors work in const context
+        const TEST_KEYS_23: [u64; 23] = [1; 23];
+        const TEST_KEYS_25: [u64; 25] = [2; 25];
+
+        const STORAGE_256: CrcKeysStorage = CrcKeysStorage::from_keys_fold_256(TEST_KEYS_23);
+        const STORAGE_FUTURE: CrcKeysStorage =
+            CrcKeysStorage::from_keys_fold_future_test(TEST_KEYS_25);
+
+        // Verify the const constructors work correctly
+        assert_eq!(STORAGE_256.get_key(0), 1);
+        assert_eq!(STORAGE_256.key_count(), 23);
+
+        assert_eq!(STORAGE_FUTURE.get_key(0), 2);
+        assert_eq!(STORAGE_FUTURE.key_count(), 25);
+    }
+
+    #[test]
+    fn test_crc_keys_storage_bounds_safety() {
+        let storage_256 = CrcKeysStorage::from_keys_fold_256([42; 23]);
+        let storage_future = CrcKeysStorage::from_keys_fold_future_test([84; 25]);
+
+        // Test edge cases for bounds checking
+        assert_eq!(storage_256.get_key(22), 42); // Last valid index
+        assert_eq!(storage_256.get_key(23), 0); // First invalid index
+
+        assert_eq!(storage_future.get_key(24), 84); // Last valid index
+        assert_eq!(storage_future.get_key(25), 0); // First invalid index
+
+        // Test very large indices
+        assert_eq!(storage_256.get_key(usize::MAX), 0);
+        assert_eq!(storage_future.get_key(usize::MAX), 0);
     }
 }

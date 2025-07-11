@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Phase 1: Add CrcKeysStorage enum and helper methods
+- [x] 1. Phase 1: Add CrcKeysStorage enum and helper methods
   - Add CrcKeysStorage enum with KeysFold256 and KeysFutureTest variants
   - Implement get_key() and key_count() methods on CrcKeysStorage
   - Add const constructor methods from_keys_fold_256() and from_keys_fold_future_test()
