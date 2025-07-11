@@ -165,16 +165,14 @@ pub enum CrcAlgorithm {
 /// Internal storage for CRC folding keys that can accommodate different array sizes.
 /// This enum allows future expansion to support larger folding distances while maintaining
 /// backwards compatibility with existing const definitions.
-#[derive(Clone, Copy, Debug)]
-#[allow(dead_code)] // Used in Phase 3 of migration
-enum CrcKeysStorage {
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum CrcKeysStorage {
     /// Current 23-key format for existing algorithms (supports up to 256-byte folding distances)
     KeysFold256([u64; 23]),
     /// Future 25-key format for potential expanded folding distances (testing purposes only)
     KeysFutureTest([u64; 25]),
 }
 
-#[allow(dead_code)] // Used in Phase 3 of migration
 impl CrcKeysStorage {
     /// Safe key access with bounds checking. Returns 0 for out-of-bounds indices.
     #[inline(always)]
@@ -214,8 +212,37 @@ impl CrcKeysStorage {
 
     /// Const constructor for 25-key arrays (future expansion testing).
     #[inline(always)]
+    #[allow(dead_code)] // Reserved for future expansion
     const fn from_keys_fold_future_test(keys: [u64; 25]) -> Self {
         CrcKeysStorage::KeysFutureTest(keys)
+    }
+
+    /// Extracts keys as a [u64; 23] array for FFI compatibility.
+    /// For variants with more than 23 keys, only the first 23 are returned.
+    /// For variants with fewer keys, remaining slots are filled with 0.
+    #[inline(always)]
+    pub fn to_keys_array_23(self) -> [u64; 23] {
+        match self {
+            CrcKeysStorage::KeysFold256(keys) => keys,
+            CrcKeysStorage::KeysFutureTest(keys) => {
+                let mut result = [0u64; 23];
+                result.copy_from_slice(&keys[..23]);
+                result
+            }
+        }
+    }
+}
+
+// Implement PartialEq between CrcKeysStorage and [u64; 23] for test compatibility
+impl PartialEq<[u64; 23]> for CrcKeysStorage {
+    fn eq(&self, other: &[u64; 23]) -> bool {
+        self.to_keys_array_23() == *other
+    }
+}
+
+impl PartialEq<CrcKeysStorage> for [u64; 23] {
+    fn eq(&self, other: &CrcKeysStorage) -> bool {
+        *self == other.to_keys_array_23()
     }
 }
 
@@ -231,7 +258,7 @@ pub struct CrcParams {
     pub refout: bool,
     pub xorout: u64,
     pub check: u64,
-    pub keys: [u64; 23],
+    pub keys: CrcKeysStorage,
 }
 
 /// Type alias for a function pointer that represents a CRC calculation function.
@@ -1217,7 +1244,7 @@ mod lib {
             refout: true,
             xorout: 0xFFFFFFFF,
             check: 0xCBF43926,
-            keys: test_keys,
+            keys: CrcKeysStorage::from_keys_fold_256(test_keys),
         };
 
         // Test valid key access

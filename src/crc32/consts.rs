@@ -25,7 +25,7 @@ pub const CRC32_AIXM: CrcParams = CrcParams {
     refout: CRC_32_AIXM.refout, // false
     xorout: CRC_32_AIXM.xorout as u64,
     check: CRC_32_AIXM.check as u64,
-    keys: KEYS_814141AB_FORWARD,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_814141AB_FORWARD),
 };
 
 // width=32 poly=0xf4acfb13 init=0xffffffff refin=true refout=true xorout=0xffffffff check=0x1697d06a residue=0x904cddbf name="CRC-32/AUTOSAR"
@@ -39,7 +39,7 @@ pub const CRC32_AUTOSAR: CrcParams = CrcParams {
     refout: CRC_32_AUTOSAR.refout, // true
     xorout: CRC_32_AUTOSAR.xorout as u64,
     check: CRC_32_AUTOSAR.check as u64,
-    keys: KEYS_F4ACFB13_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_F4ACFB13_REFLECTED),
 };
 
 // width=32 poly=0xa833982b init=0xffffffff refin=true refout=true xorout=0xffffffff check=0x87315576 residue=0x45270551 name="CRC-32/BASE91-D"
@@ -53,7 +53,7 @@ pub const CRC32_BASE91_D: CrcParams = CrcParams {
     refout: CRC_32_BASE91_D.refout, // true
     xorout: CRC_32_BASE91_D.xorout as u64,
     check: CRC_32_BASE91_D.check as u64,
-    keys: KEYS_A833982B_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_A833982B_REFLECTED),
 };
 
 // width=32 poly=0x04c11db7 init=0xffffffff refin=false refout=false xorout=0xffffffff check=0xfc891918 residue=0xc704dd7b name="CRC-32/BZIP2"
@@ -67,7 +67,7 @@ pub const CRC32_BZIP2: CrcParams = CrcParams {
     refout: CRC_32_BZIP2.refout, // false
     xorout: CRC_32_BZIP2.xorout as u64,
     check: CRC_32_BZIP2.check as u64,
-    keys: KEYS_04C11DB7_FORWARD,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_04C11DB7_FORWARD),
 };
 
 // width=32 poly=0x8001801b init=0x00000000 refin=true refout=true xorout=0x00000000 check=0x6ec2edc4 residue=0x00000000 name="CRC-32/CD-ROM-EDC"
@@ -81,7 +81,7 @@ pub const CRC32_CD_ROM_EDC: CrcParams = CrcParams {
     refout: CRC_32_CD_ROM_EDC.refout, // true
     xorout: CRC_32_CD_ROM_EDC.xorout as u64,
     check: CRC_32_CD_ROM_EDC.check as u64,
-    keys: KEYS_8001801B_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_8001801B_REFLECTED),
 };
 
 // width=32 poly=0x04c11db7 init=0x00000000 refin=false refout=false xorout=0xffffffff check=0x765e7680 residue=0xc704dd7b name="CRC-32/CKSUM"
@@ -95,7 +95,7 @@ pub const CRC32_CKSUM: CrcParams = CrcParams {
     refout: CRC_32_CKSUM.refout, // false
     xorout: CRC_32_CKSUM.xorout as u64,
     check: CRC_32_CKSUM.check as u64,
-    keys: KEYS_04C11DB7_FORWARD,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_04C11DB7_FORWARD),
 };
 
 // width=32 poly=0x1edc6f41 init=0xffffffff refin=true refout=true xorout=0xffffffff check=0xe3069283 residue=0xb798b438 name="CRC-32/ISCSI"
@@ -109,7 +109,7 @@ pub const CRC32_ISCSI: CrcParams = CrcParams {
     refout: CRC_32_ISCSI.refout, // true
     xorout: CRC_32_ISCSI.xorout as u64,
     check: CRC_32_ISCSI.check as u64,
-    keys: KEYS_1EDC6F41_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_1EDC6F41_REFLECTED),
 };
 
 // width=32 poly=0x04c11db7 init=0xffffffff refin=true refout=true xorout=0xffffffff check=0xcbf43926 residue=0xdebb20e3 name="CRC-32/ISO-HDLC"
@@ -123,7 +123,7 @@ pub const CRC32_ISO_HDLC: CrcParams = CrcParams {
     refout: CRC_32_ISO_HDLC.refout, // true
     xorout: CRC_32_ISO_HDLC.xorout as u64,
     check: CRC_32_ISO_HDLC.check as u64,
-    keys: KEYS_04C11DB7_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_04C11DB7_REFLECTED),
 };
 
 // width=32 poly=0x04c11db7 init=0xffffffff refin=true refout=true xorout=0x00000000 check=0x340bc6d9 residue=0x00000000 name="CRC-32/JAMCRC"
@@ -137,7 +137,7 @@ pub const CRC32_JAMCRC: CrcParams = CrcParams {
     refout: CRC_32_JAMCRC.refout, // true
     xorout: CRC_32_JAMCRC.xorout as u64,
     check: CRC_32_JAMCRC.check as u64,
-    keys: KEYS_04C11DB7_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_04C11DB7_REFLECTED),
 };
 
 // width=32 poly=0x741b8cd7 init=0xffffffff refin=true refout=true xorout=0x00000000 check=0xd2c22f51 residue=0x00000000 name="CRC-32/MEF"
@@ -151,7 +151,7 @@ pub const CRC32_MEF: CrcParams = CrcParams {
     refout: CRC_32_MEF.refout, // true
     xorout: CRC_32_MEF.xorout as u64,
     check: CRC_32_MEF.check as u64,
-    keys: KEYS_741B8CD7_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_741B8CD7_REFLECTED),
 };
 
 // width=32 poly=0x04c11db7 init=0xffffffff refin=false refout=false xorout=0x00000000 check=0x0376e6e7 residue=0x00000000 name="CRC-32/MPEG-2"
@@ -165,7 +165,7 @@ pub const CRC32_MPEG_2: CrcParams = CrcParams {
     refout: CRC_32_MPEG_2.refout, // false
     xorout: CRC_32_MPEG_2.xorout as u64,
     check: CRC_32_MPEG_2.check as u64,
-    keys: KEYS_04C11DB7_FORWARD,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_04C11DB7_FORWARD),
 };
 
 // width=32 poly=0x000000af init=0x00000000 refin=false refout=false xorout=0x00000000 check=0xbd0be338 residue=0x00000000 name="CRC-32/XFER"
@@ -179,7 +179,7 @@ pub const CRC32_XFER: CrcParams = CrcParams {
     refout: CRC_32_XFER.refout, // false
     xorout: CRC_32_XFER.xorout as u64,
     check: CRC_32_XFER.check as u64,
-    keys: KEYS_000000AF_FORWARD,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_000000AF_FORWARD),
 };
 
 // CRC-32/AIXM

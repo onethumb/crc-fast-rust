@@ -178,7 +178,40 @@ fn main() -> ExitCode {
     );
 
     println!();
-    println!("{:#x?}", params);
+    println!("// Generated CRC parameters for {}", static_name);
+    println!(
+        "pub const {}: CrcParams = CrcParams {{",
+        static_name
+            .to_uppercase()
+            .replace("-", "_")
+            .replace("/", "_")
+    );
+    println!(
+        "    algorithm: CrcAlgorithm::{}Custom,",
+        if config.width.unwrap() == 32 {
+            "Crc32"
+        } else {
+            "Crc64"
+        }
+    );
+    println!("    name: \"{}\",", static_name);
+    println!("    width: {},", config.width.unwrap());
+    println!("    poly: 0x{:x},", config.polynomial.unwrap());
+    println!("    init: 0x{:x},", config.init.unwrap());
+    println!("    refin: {},", config.reflected.unwrap());
+    println!("    refout: {},", config.reflected.unwrap());
+    println!("    xorout: 0x{:x},", config.xorout.unwrap());
+    println!("    check: 0x{:x},", config.check.unwrap());
+    println!("    keys: CrcKeysStorage::from_keys_fold_256([");
+
+    // Print the keys array
+    for i in 0..23 {
+        let key = params.get_key(i);
+        println!("        0x{:016x},", key);
+    }
+
+    println!("    ]),");
+    println!("}};");
     println!();
 
     ExitCode::from(0)

@@ -18,7 +18,7 @@ pub const CRC64_ECMA_182: CrcParams = CrcParams {
     refout: CRC_64_ECMA_182.refout, // false
     xorout: CRC_64_ECMA_182.xorout,
     check: CRC_64_ECMA_182.check,
-    keys: KEYS_42F0E1EBA9EA3693_FORWARD,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_42F0E1EBA9EA3693_FORWARD),
 };
 
 // width=64 poly=0x000000000000001b init=0xffffffffffffffff refin=true refout=true xorout=0xffffffffffffffff check=0xb90956c775a41001 residue=0x5300000000000000 name="CRC-64/GO-ISO"
@@ -32,7 +32,7 @@ pub const CRC64_GO_ISO: CrcParams = CrcParams {
     refout: CRC_64_GO_ISO.refout, // true
     xorout: CRC_64_GO_ISO.xorout,
     check: CRC_64_GO_ISO.check,
-    keys: KEYS_000000000000001B_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_000000000000001B_REFLECTED),
 };
 
 // width=64 poly=0x259c84cba6426349 init=0xffffffffffffffff refin=true refout=true xorout=0x0000000000000000 check=0x75d4b74f024eceea residue=0x0000000000000000 name="CRC-64/MS"
@@ -46,7 +46,7 @@ pub const CRC64_MS: CrcParams = CrcParams {
     refout: CRC_64_MS.refout, // true
     xorout: CRC_64_MS.xorout,
     check: CRC_64_MS.check,
-    keys: KEYS_259C84CBA6426349_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_259C84CBA6426349_REFLECTED),
 };
 
 // https://reveng.sourceforge.io/crc-catalogue/all.htm#crc.cat.crc-64-nvme
@@ -61,7 +61,7 @@ pub const CRC64_NVME: CrcParams = CrcParams {
     refout: CRC_64_NVME.refout, // true
     xorout: CRC_64_NVME.xorout,
     check: CRC_64_NVME.check,
-    keys: KEYS_AD93D23594C93659_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_AD93D23594C93659_REFLECTED),
 };
 
 // width=64 poly=0xad93d23594c935a9 init=0x0000000000000000 refin=true refout=true xorout=0x0000000000000000 check=0xe9c6d914c4b8d9ca residue=0x0000000000000000 name="CRC-64/REDIS"
@@ -75,7 +75,7 @@ pub const CRC64_REDIS: CrcParams = CrcParams {
     refout: CRC_64_REDIS.refout, // true
     xorout: CRC_64_REDIS.xorout,
     check: CRC_64_REDIS.check,
-    keys: KEYS_AD93D23594C935A9_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_AD93D23594C935A9_REFLECTED),
 };
 
 // width=64 poly=0x42f0e1eba9ea3693 init=0xffffffffffffffff refin=false refout=false xorout=0xffffffffffffffff check=0x62ec59e3f1a4f00a residue=0xfcacbebd5931a992 name="CRC-64/WE"
@@ -89,7 +89,7 @@ pub const CRC64_WE: CrcParams = CrcParams {
     refout: CRC_64_WE.refout, // false
     xorout: CRC_64_WE.xorout,
     check: CRC_64_WE.check,
-    keys: KEYS_42F0E1EBA9EA3693_FORWARD,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_42F0E1EBA9EA3693_FORWARD),
 };
 
 // width=64 poly=0x42f0e1eba9ea3693 init=0xffffffffffffffff refin=true refout=true xorout=0xffffffffffffffff check=0x995dc9bbdf1939fa residue=0x49958c9abd7d353f name="CRC-64/XZ"
@@ -103,7 +103,7 @@ pub const CRC64_XZ: CrcParams = CrcParams {
     refout: CRC_64_XZ.refout, // true
     xorout: CRC_64_XZ.xorout,
     check: CRC_64_XZ.check,
-    keys: KEYS_42F0E1EBA9EA3693_REFLECTED,
+    keys: crate::CrcKeysStorage::from_keys_fold_256(KEYS_42F0E1EBA9EA3693_REFLECTED),
 };
 
 // CRC-64/MS

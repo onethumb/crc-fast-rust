@@ -1378,7 +1378,7 @@ mod tests {
         let _refout: bool = params.refout;
         let _xorout: u64 = params.xorout;
         let _check: u64 = params.check;
-        let _keys: [u64; 23] = params.keys;
+        let _keys: [u64; 23] = params.keys.to_keys_array_23();
 
         // Verify the algorithm is set correctly based on width
         match params.width {
@@ -1498,12 +1498,12 @@ mod tests {
         assert_eq!(params64_max.poly, 0xFFFFFFFFFFFFFFFF);
 
         // Verify all instances have valid 23-element key arrays
-        assert_eq!(params_min_poly.keys.len(), 23);
-        assert_eq!(params_max_poly.keys.len(), 23);
-        assert_eq!(params_reflected.keys.len(), 23);
-        assert_eq!(params_normal.keys.len(), 23);
-        assert_eq!(params64_min.keys.len(), 23);
-        assert_eq!(params64_max.keys.len(), 23);
+        assert_eq!(params_min_poly.keys.key_count(), 23);
+        assert_eq!(params_max_poly.keys.key_count(), 23);
+        assert_eq!(params_reflected.keys.key_count(), 23);
+        assert_eq!(params_normal.keys.key_count(), 23);
+        assert_eq!(params64_min.keys.key_count(), 23);
+        assert_eq!(params64_max.keys.key_count(), 23);
     }
 
     #[test]

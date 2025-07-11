@@ -58,7 +58,8 @@ impl CrcParams {
         xorout: u64,
         check: u64,
     ) -> Self {
-        let keys = cache::get_or_generate_keys(width, poly, reflected);
+        let keys_array = cache::get_or_generate_keys(width, poly, reflected);
+        let keys = crate::CrcKeysStorage::from_keys_fold_256(keys_array);
 
         let algorithm = match width {
             32 => CrcAlgorithm::Crc32Custom,
@@ -84,21 +85,15 @@ impl CrcParams {
     /// This provides safe access regardless of internal key storage format.
     #[inline(always)]
     pub fn get_key(self, index: usize) -> u64 {
-        // Phase 1: Delegate to existing keys field for backwards compatibility
-        if index < 23 {
-            self.keys[index]
-        } else {
-            0
-        }
+        self.keys.get_key(index)
     }
 
     /// Gets a key at the specified index, returning None if out of bounds.
     /// This provides optional key access for cases where bounds checking is needed.
     #[inline(always)]
     pub fn get_key_checked(self, index: usize) -> Option<u64> {
-        // Phase 1: Delegate to existing keys field for backwards compatibility
-        if index < 23 {
-            Some(self.keys[index])
+        if index < self.keys.key_count() {
+            Some(self.keys.get_key(index))
         } else {
             None
         }
@@ -107,7 +102,6 @@ impl CrcParams {
     /// Returns the number of keys available in this CrcParams instance.
     #[inline(always)]
     pub fn key_count(self) -> usize {
-        // Phase 1: Return fixed count for existing keys field
-        23
+        self.keys.key_count()
     }
 }

@@ -100,7 +100,7 @@ impl From<CrcFastParams> for CrcParams {
             refout: value.refout,
             xorout: value.xorout,
             check: value.check,
-            keys: value.keys,
+            keys: crate::CrcKeysStorage::from_keys_fold_256(value.keys),
         }
     }
 }
@@ -368,7 +368,7 @@ pub extern "C" fn crc_fast_get_custom_params(
         refout: params.refout,
         xorout: params.xorout,
         check: params.check,
-        keys: params.keys,
+        keys: params.keys.to_keys_array_23(),
     }
 }
 
