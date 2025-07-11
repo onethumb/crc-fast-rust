@@ -1322,3 +1322,385 @@ fn test_future_expansion_backwards_compatibility() {
         "Third-party function should produce identical results"
     );
 }
+// FFI Tests for future-proof CrcFastParams functionality
+
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64", target_arch = "x86"))]
+mod ffi_tests {
+    use crate::ffi::CrcFastParams;
+    use crate::{CrcAlgorithm, CrcKeysStorage, CrcParams};
+
+    #[test]
+    fn test_ffi_conversion_23_keys() {
+        // Test conversion between CrcParams and CrcFastParams for 23-key variant
+        let keys_23 = [0x1234567890ABCDEFu64; 23];
+        let original_params = CrcParams {
+            algorithm: CrcAlgorithm::Crc32Custom,
+            name: "FFI Test 23",
+            width: 32,
+            poly: 0x1EDC6F41,
+            init: 0xFFFFFFFF,
+            refin: true,
+            refout: true,
+            xorout: 0xFFFFFFFF,
+            check: 0x12345678,
+            keys: CrcKeysStorage::from_keys_fold_256(keys_23),
+        };
+
+        // Convert to FFI struct
+        let ffi_params: CrcFastParams = original_params.into();
+
+        // Verify FFI struct fields
+        assert_eq!(ffi_params.key_count, 23, "FFI params should have 23 keys");
+        assert!(
+            !ffi_params.keys.is_null(),
+            "Keys pointer should not be null"
+        );
+        assert_eq!(ffi_params.width, 32, "Width should match");
+        assert_eq!(ffi_params.poly, 0x1EDC6F41, "Poly should match");
+        assert_eq!(ffi_params.init, 0xFFFFFFFF, "Init should match");
+        assert!(ffi_params.refin, "Refin should match");
+        assert!(ffi_params.refout, "Refout should match");
+        assert_eq!(ffi_params.xorout, 0xFFFFFFFF, "Xorout should match");
+        assert_eq!(ffi_params.check, 0x12345678, "Check should match");
+
+        // Test direct pointer access to keys
+        unsafe {
+            for i in 0..23 {
+                let key_value = *ffi_params.keys.add(i);
+                assert_eq!(
+                    key_value, 0x1234567890ABCDEF,
+                    "Key {} should match expected value",
+                    i
+                );
+            }
+        }
+
+        // Convert back to CrcParams
+        let converted_params: CrcParams = ffi_params.into();
+
+        // Verify round-trip conversion
+        assert_eq!(converted_params.algorithm, original_params.algorithm);
+        assert_eq!(converted_params.width, original_params.width);
+        assert_eq!(converted_params.poly, original_params.poly);
+        assert_eq!(converted_params.init, original_params.init);
+        assert_eq!(converted_params.refin, original_params.refin);
+        assert_eq!(converted_params.refout, original_params.refout);
+        assert_eq!(converted_params.xorout, original_params.xorout);
+        assert_eq!(converted_params.check, original_params.check);
+        assert_eq!(converted_params.key_count(), 23);
+
+        // Verify all keys match
+        for i in 0..23 {
+            assert_eq!(
+                converted_params.get_key(i),
+                original_params.get_key(i),
+                "Converted key {} should match original",
+                i
+            );
+        }
+    }
+
+    #[test]
+    fn test_ffi_conversion_25_keys() {
+        // Test conversion between CrcParams and CrcFastParams for 25-key variant
+        let keys_25 = [0xFEDCBA0987654321u64; 25];
+        let original_params = CrcParams {
+            algorithm: CrcAlgorithm::Crc64Custom,
+            name: "FFI Test 25",
+            width: 64,
+            poly: 0x42F0E1EBA9EA3693,
+            init: 0xFFFFFFFFFFFFFFFF,
+            refin: true,
+            refout: true,
+            xorout: 0xFFFFFFFFFFFFFFFF,
+            check: 0x123456789ABCDEF0,
+            keys: CrcKeysStorage::from_keys_fold_future_test(keys_25),
+        };
+
+        // Convert to FFI struct
+        let ffi_params: CrcFastParams = original_params.into();
+
+        // Verify FFI struct fields
+        assert_eq!(ffi_params.key_count, 25, "FFI params should have 25 keys");
+        assert!(
+            !ffi_params.keys.is_null(),
+            "Keys pointer should not be null"
+        );
+        assert_eq!(ffi_params.width, 64, "Width should match");
+        assert_eq!(ffi_params.poly, 0x42F0E1EBA9EA3693, "Poly should match");
+
+        // Test direct pointer access to keys
+        unsafe {
+            for i in 0..25 {
+                let key_value = *ffi_params.keys.add(i);
+                assert_eq!(
+                    key_value, 0xFEDCBA0987654321,
+                    "Key {} should match expected value",
+                    i
+                );
+            }
+        }
+
+        // Convert back to CrcParams
+        let converted_params: CrcParams = ffi_params.into();
+
+        // Verify round-trip conversion
+        assert_eq!(converted_params.key_count(), 25);
+        for i in 0..25 {
+            assert_eq!(
+                converted_params.get_key(i),
+                original_params.get_key(i),
+                "Converted key {} should match original",
+                i
+            );
+        }
+    }
+
+    #[test]
+    fn test_ffi_pointer_stability() {
+        // Test that key pointers remain stable across multiple conversions
+        let keys_23 = [0x1111111111111111u64; 23];
+        let params = CrcParams {
+            algorithm: CrcAlgorithm::Crc32Custom,
+            name: "Stability Test",
+            width: 32,
+            poly: 0x1EDC6F41,
+            init: 0xFFFFFFFF,
+            refin: true,
+            refout: true,
+            xorout: 0xFFFFFFFF,
+            check: 0x12345678,
+            keys: CrcKeysStorage::from_keys_fold_256(keys_23),
+        };
+
+        // Convert to FFI multiple times
+        let ffi_params1: CrcFastParams = params.into();
+        let ffi_params2: CrcFastParams = params.into();
+
+        // Pointers should be stable (same keys should get same pointer)
+        assert_eq!(
+            ffi_params1.keys, ffi_params2.keys,
+            "Identical key sets should get same stable pointer"
+        );
+        assert_eq!(
+            ffi_params1.key_count, ffi_params2.key_count,
+            "Key counts should match"
+        );
+
+        // Test that different key sets get different pointers
+        let different_keys = [0x2222222222222222u64; 23];
+        let different_params = CrcParams {
+            algorithm: CrcAlgorithm::Crc32Custom,
+            name: "Different Test",
+            width: 32,
+            poly: 0x1EDC6F41,
+            init: 0xFFFFFFFF,
+            refin: true,
+            refout: true,
+            xorout: 0xFFFFFFFF,
+            check: 0x12345678,
+            keys: CrcKeysStorage::from_keys_fold_256(different_keys),
+        };
+
+        let ffi_params3: CrcFastParams = different_params.into();
+        assert_ne!(
+            ffi_params1.keys, ffi_params3.keys,
+            "Different key sets should get different pointers"
+        );
+    }
+
+    #[test]
+    fn test_ffi_memory_safety() {
+        // Test that FFI conversions are memory safe
+        let keys_23 = [0xAAAAAAAAAAAAAAAAu64; 23];
+        let params = CrcParams {
+            algorithm: CrcAlgorithm::Crc32Custom,
+            name: "Memory Safety Test",
+            width: 32,
+            poly: 0x1EDC6F41,
+            init: 0xFFFFFFFF,
+            refin: true,
+            refout: true,
+            xorout: 0xFFFFFFFF,
+            check: 0x12345678,
+            keys: CrcKeysStorage::from_keys_fold_256(keys_23),
+        };
+
+        let ffi_params: CrcFastParams = params.into();
+
+        // Test that we can safely access all keys through the pointer
+        unsafe {
+            let keys_slice =
+                std::slice::from_raw_parts(ffi_params.keys, ffi_params.key_count as usize);
+
+            // Verify all keys are accessible and correct
+            for (i, &key) in keys_slice.iter().enumerate() {
+                assert_eq!(
+                    key, 0xAAAAAAAAAAAAAAAA,
+                    "Key {} should be accessible and correct",
+                    i
+                );
+            }
+
+            // Test that we can create multiple slices from the same pointer
+            let keys_slice2 =
+                std::slice::from_raw_parts(ffi_params.keys, ffi_params.key_count as usize);
+            assert_eq!(
+                keys_slice, keys_slice2,
+                "Multiple slices should be identical"
+            );
+        }
+
+        // Test conversion back to CrcParams
+        let converted: CrcParams = ffi_params.into();
+        assert_eq!(converted.key_count(), 23);
+
+        for i in 0..23 {
+            assert_eq!(
+                converted.get_key(i),
+                0xAAAAAAAAAAAAAAAA,
+                "Converted key {} should match",
+                i
+            );
+        }
+    }
+
+    #[test]
+    fn test_ffi_different_key_counts() {
+        // Test FFI with different key count scenarios
+
+        // Test 23-key variant
+        let keys_23 = [0x1111111111111111u64; 23];
+        let params_23 = CrcParams {
+            algorithm: CrcAlgorithm::Crc32Custom,
+            name: "23-Key FFI Test",
+            width: 32,
+            poly: 0x1EDC6F41,
+            init: 0xFFFFFFFF,
+            refin: true,
+            refout: true,
+            xorout: 0xFFFFFFFF,
+            check: 0x12345678,
+            keys: CrcKeysStorage::from_keys_fold_256(keys_23),
+        };
+
+        // Test 25-key variant
+        let keys_25 = [0x2222222222222222u64; 25];
+        let params_25 = CrcParams {
+            algorithm: CrcAlgorithm::Crc64Custom,
+            name: "25-Key FFI Test",
+            width: 64,
+            poly: 0x42F0E1EBA9EA3693,
+            init: 0xFFFFFFFFFFFFFFFF,
+            refin: true,
+            refout: true,
+            xorout: 0xFFFFFFFFFFFFFFFF,
+            check: 0x123456789ABCDEF0,
+            keys: CrcKeysStorage::from_keys_fold_future_test(keys_25),
+        };
+
+        // Convert both to FFI
+        let ffi_23: CrcFastParams = params_23.into();
+        let ffi_25: CrcFastParams = params_25.into();
+
+        // Verify key counts
+        assert_eq!(ffi_23.key_count, 23);
+        assert_eq!(ffi_25.key_count, 25);
+
+        // Test C-style access patterns
+        unsafe {
+            // Access all keys in 23-key variant
+            for i in 0..23 {
+                let key = *ffi_23.keys.add(i);
+                assert_eq!(
+                    key, 0x1111111111111111,
+                    "23-key variant key {} should match",
+                    i
+                );
+            }
+
+            // Access all keys in 25-key variant
+            for i in 0..25 {
+                let key = *ffi_25.keys.add(i);
+                assert_eq!(
+                    key, 0x2222222222222222,
+                    "25-key variant key {} should match",
+                    i
+                );
+            }
+
+            // Test bounds-aware C code pattern
+            for ffi_params in [&ffi_23, &ffi_25] {
+                for i in 0..ffi_params.key_count {
+                    let key = *ffi_params.keys.add(i as usize);
+                    assert_ne!(key, 0, "Key {} should not be zero", i);
+                }
+            }
+        }
+
+        // Test round-trip conversions
+        let converted_23: CrcParams = ffi_23.into();
+        let converted_25: CrcParams = ffi_25.into();
+
+        assert_eq!(converted_23.key_count(), 23);
+        assert_eq!(converted_25.key_count(), 25);
+
+        // Verify all keys survived round-trip
+        for i in 0..23 {
+            assert_eq!(converted_23.get_key(i), 0x1111111111111111);
+        }
+        for i in 0..25 {
+            assert_eq!(converted_25.get_key(i), 0x2222222222222222);
+        }
+    }
+
+    #[test]
+    fn test_ffi_get_custom_params_function() {
+        // Test the crc_fast_get_custom_params FFI function
+        use std::ffi::CString;
+
+        let name = CString::new("Test CRC").unwrap();
+        let ffi_params = crate::ffi::crc_fast_get_custom_params(
+            name.as_ptr(),
+            32,
+            0x1EDC6F41,
+            0xFFFFFFFF,
+            true,
+            0xFFFFFFFF,
+            0x12345678,
+        );
+
+        // Verify the returned FFI params
+        assert_eq!(ffi_params.width, 32);
+        assert_eq!(ffi_params.poly, 0x1EDC6F41);
+        assert_eq!(ffi_params.init, 0xFFFFFFFF);
+        assert!(ffi_params.refin);
+        assert!(ffi_params.refout);
+        assert_eq!(ffi_params.xorout, 0xFFFFFFFF);
+        assert_eq!(ffi_params.check, 0x12345678);
+        assert!(
+            !ffi_params.keys.is_null(),
+            "Keys pointer should not be null"
+        );
+        assert!(ffi_params.key_count > 0, "Should have keys");
+
+        // Test that we can access the keys
+        unsafe {
+            for i in 0..ffi_params.key_count {
+                let _key = *ffi_params.keys.add(i as usize);
+                // Keys should be accessible without crashing
+            }
+        }
+
+        // Test conversion to CrcParams
+        let params: CrcParams = ffi_params.into();
+        assert_eq!(params.width, 32);
+        assert_eq!(params.poly, 0x1EDC6F41);
+        assert_eq!(params.init, 0xFFFFFFFF);
+        assert!(params.refin);
+        assert!(params.refout);
+        assert_eq!(params.xorout, 0xFFFFFFFF);
+        assert_eq!(params.check, 0x12345678);
+        assert!(params.key_count() > 0);
+    }
+}

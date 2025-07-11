@@ -64,7 +64,8 @@ typedef struct CrcFastParams {
   bool refout;
   uint64_t xorout;
   uint64_t check;
-  uint64_t keys[23];
+  uint32_t key_count;
+  const uint64_t *keys;
 } CrcFastParams;
 
 #ifdef __cplusplus

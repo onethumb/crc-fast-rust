@@ -61,6 +61,26 @@ This feature implements a future-proof CrcParams structure that can expand to su
 
 #### Acceptance Criteria
 
-1. WHEN I run the `get-custom-params` binary THEN it SHALL output CrcParams const definitions using CrcKeysStorage::from_keys_23()
+1. WHEN I run the `get-custom-params` binary THEN it SHALL output CrcParams const definitions using CrcKeysStorage::from_keys_fold_256()
 2. WHEN I copy the generated const definition THEN it SHALL compile and work correctly with the new CrcParams structure
 3. WHEN the output format changes THEN the generated code SHALL remain compatible with the current CrcParams API
+
+### Requirement 7
+
+**User Story:** As a C/C++ application developer, I want the FFI interface to be future-proof for key expansion, so that my applications can benefit from future performance improvements without requiring code changes.
+
+#### Acceptance Criteria
+
+1. WHEN the library adds support for larger key arrays THEN existing C code using CrcFastParams SHALL continue to compile and function correctly
+2. WHEN I create custom CRC parameters in C THEN I SHALL be able to specify the key count and keys dynamically
+3. WHEN I access CRC functionality through the C API THEN the performance SHALL remain identical to direct Rust usage
+
+### Requirement 8
+
+**User Story:** As a library maintainer, I want the C FFI interface to support different key array sizes internally, so that C users can benefit from future CRC algorithm improvements.
+
+#### Acceptance Criteria
+
+1. WHEN I add new CrcKeysStorage variants with different key counts THEN the C API SHALL automatically support them
+2. WHEN C code specifies custom key arrays THEN they SHALL be automatically converted to the appropriate internal storage format
+3. WHEN C code queries key information THEN it SHALL receive accurate key count and key data for the specific CRC algorithm being used

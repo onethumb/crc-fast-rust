@@ -94,3 +94,29 @@
   - Verify that all CRC calculations produce identical results
   - Test that third-party usage patterns remain functional
   - _Requirements: 5.4_
+
+- [x] 6. Implement FFI future-proofing for C/C++ compatibility
+  - [x] 6.1 Update CrcFastParams struct to use pointer-based keys
+    - Change keys field from [u64; 23] to const uint64_t *keys pointer
+    - Add key_count field to track number of available keys
+    - Update From<CrcFastParams> and From<CrcParams> conversion implementations
+    - _Requirements: 7.2, 8.1_
+
+  - [x] 6.2 Implement stable key pointer management
+    - Add create_stable_key_pointer() helper function for CrcKeysStorage
+    - Ensure key pointers remain valid for the lifetime of CrcFastParams
+    - Handle memory management safely between Rust and C boundaries
+    - _Requirements: 8.2, 8.3_
+
+  - [x] 6.3 Update FFI functions to use new CrcFastParams structure
+    - Update existing FFI functions to use new pointer-based CrcFastParams
+    - Ensure all FFI functions handle variable key counts correctly
+    - Test conversion between CrcKeysStorage variants and C pointer access
+    - _Requirements: 7.1, 7.3_
+
+  - [x] 6.4 Update C header file and add comprehensive FFI tests
+    - Update CrcFastParams struct definition in libcrc_fast.h to use pointer
+    - Create FFI tests for direct pointer access with different key counts
+    - Test future expansion scenarios with different key counts (23, 25, etc.)
+    - Verify memory safety and pointer stability across FFI boundary
+    - _Requirements: 7.1, 8.1_

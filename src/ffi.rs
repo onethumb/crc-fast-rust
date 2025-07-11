@@ -10,9 +10,58 @@
 use crate::CrcAlgorithm;
 use crate::CrcParams;
 use crate::{get_calculator_target, Digest};
+use std::collections::HashMap;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
+use std::sync::Mutex;
+use std::sync::OnceLock;
+
+// Global storage for stable key pointers to ensure they remain valid across FFI boundary
+static STABLE_KEY_STORAGE: OnceLock<Mutex<HashMap<u64, Box<[u64]>>>> = OnceLock::new();
+
+/// Creates a stable pointer to the keys for FFI usage.
+/// The keys are stored in global memory to ensure the pointer remains valid.
+fn create_stable_key_pointer(keys: &crate::CrcKeysStorage) -> (*const u64, u32) {
+    let storage = STABLE_KEY_STORAGE.get_or_init(|| Mutex::new(HashMap::new()));
+
+    // Create a unique hash for this key set to avoid duplicates
+    let key_hash = match keys {
+        crate::CrcKeysStorage::KeysFold256(keys) => {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            use std::hash::{Hash, Hasher};
+            keys.hash(&mut hasher);
+            hasher.finish()
+        }
+        crate::CrcKeysStorage::KeysFutureTest(keys) => {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            use std::hash::{Hash, Hasher};
+            keys.hash(&mut hasher);
+            hasher.finish()
+        }
+    };
+
+    let mut storage_map = storage.lock().unwrap();
+
+    // Check if we already have this key set stored
+    if let Some(stored_keys) = storage_map.get(&key_hash) {
+        return (stored_keys.as_ptr(), stored_keys.len() as u32);
+    }
+
+    // Store the keys in stable memory
+    let key_vec: Vec<u64> = match keys {
+        crate::CrcKeysStorage::KeysFold256(keys) => keys.to_vec(),
+        crate::CrcKeysStorage::KeysFutureTest(keys) => keys.to_vec(),
+    };
+
+    let boxed_keys = key_vec.into_boxed_slice();
+    let ptr = boxed_keys.as_ptr();
+    let count = boxed_keys.len() as u32;
+
+    storage_map.insert(key_hash, boxed_keys);
+
+    (ptr, count)
+}
 
 /// A handle to the Digest object
 #[repr(C)]
@@ -84,12 +133,26 @@ pub struct CrcFastParams {
     pub refout: bool,
     pub xorout: u64,
     pub check: u64,
-    pub keys: [u64; 23],
+    pub key_count: u32,
+    pub keys: *const u64,
 }
 
 // Convert from FFI struct to internal struct
 impl From<CrcFastParams> for CrcParams {
     fn from(value: CrcFastParams) -> Self {
+        // Convert C array back to appropriate CrcKeysStorage
+        let keys = unsafe { std::slice::from_raw_parts(value.keys, value.key_count as usize) };
+
+        let storage = match value.key_count {
+            23 => crate::CrcKeysStorage::from_keys_fold_256(
+                keys.try_into().expect("Invalid key count for fold_256"),
+            ),
+            25 => crate::CrcKeysStorage::from_keys_fold_future_test(
+                keys.try_into().expect("Invalid key count for future_test"),
+            ),
+            _ => panic!("Unsupported key count: {}", value.key_count),
+        };
+
         CrcParams {
             algorithm: value.algorithm.into(),
             name: "custom", // C interface doesn't need the name field
@@ -100,7 +163,50 @@ impl From<CrcFastParams> for CrcParams {
             refout: value.refout,
             xorout: value.xorout,
             check: value.check,
-            keys: crate::CrcKeysStorage::from_keys_fold_256(value.keys),
+            keys: storage,
+        }
+    }
+}
+
+// Convert from internal struct to FFI struct
+impl From<CrcParams> for CrcFastParams {
+    fn from(params: CrcParams) -> Self {
+        // Create stable key pointer for FFI usage
+        let (keys_ptr, key_count) = create_stable_key_pointer(&params.keys);
+
+        CrcFastParams {
+            algorithm: match params.algorithm {
+                CrcAlgorithm::Crc32Aixm => CrcFastAlgorithm::Crc32Aixm,
+                CrcAlgorithm::Crc32Autosar => CrcFastAlgorithm::Crc32Autosar,
+                CrcAlgorithm::Crc32Base91D => CrcFastAlgorithm::Crc32Base91D,
+                CrcAlgorithm::Crc32Bzip2 => CrcFastAlgorithm::Crc32Bzip2,
+                CrcAlgorithm::Crc32CdRomEdc => CrcFastAlgorithm::Crc32CdRomEdc,
+                CrcAlgorithm::Crc32Cksum => CrcFastAlgorithm::Crc32Cksum,
+                CrcAlgorithm::Crc32Custom => CrcFastAlgorithm::Crc32Custom,
+                CrcAlgorithm::Crc32Iscsi => CrcFastAlgorithm::Crc32Iscsi,
+                CrcAlgorithm::Crc32IsoHdlc => CrcFastAlgorithm::Crc32IsoHdlc,
+                CrcAlgorithm::Crc32Jamcrc => CrcFastAlgorithm::Crc32Jamcrc,
+                CrcAlgorithm::Crc32Mef => CrcFastAlgorithm::Crc32Mef,
+                CrcAlgorithm::Crc32Mpeg2 => CrcFastAlgorithm::Crc32Mpeg2,
+                CrcAlgorithm::Crc32Xfer => CrcFastAlgorithm::Crc32Xfer,
+                CrcAlgorithm::Crc64Custom => CrcFastAlgorithm::Crc64Custom,
+                CrcAlgorithm::Crc64Ecma182 => CrcFastAlgorithm::Crc64Ecma182,
+                CrcAlgorithm::Crc64GoIso => CrcFastAlgorithm::Crc64GoIso,
+                CrcAlgorithm::Crc64Ms => CrcFastAlgorithm::Crc64Ms,
+                CrcAlgorithm::Crc64Nvme => CrcFastAlgorithm::Crc64Nvme,
+                CrcAlgorithm::Crc64Redis => CrcFastAlgorithm::Crc64Redis,
+                CrcAlgorithm::Crc64We => CrcFastAlgorithm::Crc64We,
+                CrcAlgorithm::Crc64Xz => CrcFastAlgorithm::Crc64Xz,
+            },
+            width: params.width,
+            poly: params.poly,
+            init: params.init,
+            refin: params.refin,
+            refout: params.refout,
+            xorout: params.xorout,
+            check: params.check,
+            key_count,
+            keys: keys_ptr,
         }
     }
 }
@@ -354,6 +460,9 @@ pub extern "C" fn crc_fast_get_custom_params(
         check,
     );
 
+    // Create stable key pointer for FFI usage
+    let (keys_ptr, key_count) = create_stable_key_pointer(&params.keys);
+
     // Convert to FFI struct
     CrcFastParams {
         algorithm: match width {
@@ -368,7 +477,8 @@ pub extern "C" fn crc_fast_get_custom_params(
         refout: params.refout,
         xorout: params.xorout,
         check: params.check,
-        keys: params.keys.to_keys_array_23(),
+        key_count,
+        keys: keys_ptr,
     }
 }
 

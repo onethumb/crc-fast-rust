@@ -137,7 +137,7 @@ mod test;
 mod traits;
 
 /// Supported CRC-32 and CRC-64 variants
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CrcAlgorithm {
     Crc32Aixm,
     Crc32Autosar,

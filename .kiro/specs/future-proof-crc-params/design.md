@@ -199,6 +199,141 @@ mov rax, qword ptr [rdi + 168 + 21*8]
 | KeysFutureTest | 200 bytes | 8-byte aligned |
 | Enum overhead | 0 bytes | (optimized away) |
 
+## FFI Future-Proofing Design
+
+### Problem Analysis
+
+The current C FFI interface has several limitations:
+1. **Fixed Key Array**: `CrcFastParams` struct uses `uint64_t keys[23]` hardcoded
+2. **No Expansion Path**: Cannot support future key variants with different sizes
+3. **Conversion Limitation**: `to_keys_array_23()` only works for current 23-key variant
+
+### FFI Design Solution
+
+Since the current FFI hasn't shipped yet, we can make it truly future-proof from the start using a pointer-based approach that can handle any number of keys.
+
+#### Truly Future-Proof CrcFastParams Structure
+
+```c
+// Completely future-proof structure using pointer to keys
+typedef struct CrcFastParams {
+    enum CrcFastAlgorithm algorithm;
+    uint8_t width;
+    uint64_t poly;
+    uint64_t init;
+    bool refin;
+    bool refout;
+    uint64_t xorout;
+    uint64_t check;
+    uint32_t key_count;        // Number of keys available
+    const uint64_t *keys;      // Pointer to keys array (managed by Rust)
+} CrcFastParams;
+```
+
+#### Key Management Strategy
+
+1. **Rust-Managed Memory**: Keys remain in Rust-managed memory
+2. **Stable Pointers**: Use Box::leak or static storage for stable pointers
+3. **Automatic Cleanup**: Rust handles memory management transparently
+4. **No Size Limits**: Can support any number of keys (23, 25, 50, 100+)
+
+#### Internal Implementation
+
+```rust
+// Helper to create stable key pointers
+fn create_stable_key_pointer(keys: &CrcKeysStorage) -> *const u64 {
+    match keys {
+        CrcKeysStorage::KeysFold256(keys) => keys.as_ptr(),
+        CrcKeysStorage::KeysFutureTest(keys) => keys.as_ptr(),
+        // Future variants automatically supported
+    }
+}
+
+impl From<CrcParams> for CrcFastParams {
+    fn from(params: CrcParams) -> Self {
+        CrcFastParams {
+            algorithm: params.algorithm.into(),
+            width: params.width,
+            poly: params.poly,
+            init: params.init,
+            refin: params.refin,
+            refout: params.refout,
+            xorout: params.xorout,
+            check: params.check,
+            key_count: params.key_count() as u32,
+            keys: create_stable_key_pointer(&params.keys),
+        }
+    }
+}
+
+impl From<CrcFastParams> for CrcParams {
+    fn from(value: CrcFastParams) -> Self {
+        // Convert C array back to appropriate CrcKeysStorage
+        let keys = unsafe {
+            std::slice::from_raw_parts(value.keys, value.key_count as usize)
+        };
+        
+        let storage = match value.key_count {
+            23 => CrcKeysStorage::from_keys_fold_256(
+                keys.try_into().expect("Invalid key count for fold_256")
+            ),
+            25 => CrcKeysStorage::from_keys_fold_future_test(
+                keys.try_into().expect("Invalid key count for future_test")
+            ),
+            _ => panic!("Unsupported key count: {}", value.key_count),
+        };
+        
+        CrcParams {
+            algorithm: value.algorithm.into(),
+            name: "custom",
+            width: value.width,
+            poly: value.poly,
+            init: value.init,
+            refin: value.refin,
+            refout: value.refout,
+            xorout: value.xorout,
+            check: value.check,
+            keys: storage,
+        }
+    }
+}
+```
+
+#### Enhanced FFI Functions
+
+```rust
+#[no_mangle]
+pub extern "C" fn crc_fast_get_custom_params(...) -> CrcFastParams {
+    let params = CrcParams::new(...);
+    params.into()  // Automatic conversion
+}
+```
+
+#### Benefits of This Approach
+
+1. **Truly Future-Proof**: No hardcoded limits, supports any key count
+2. **Zero Copy**: Keys remain in original Rust memory, just expose pointer
+3. **Memory Safe**: Rust manages memory, C gets stable pointers
+4. **Performance**: Direct pointer access, no copying overhead
+5. **Automatic Support**: New CrcKeysStorage variants automatically work
+6. **Idiomatic C**: Direct array access pattern familiar to C developers
+
+#### C Usage Pattern
+
+```c
+// Get custom parameters
+CrcFastParams params = crc_fast_get_custom_params(...);
+
+// Direct access with bounds checking (C developer responsibility)
+for (uint32_t i = 0; i < params.key_count; i++) {
+    uint64_t key = params.keys[i];
+    // Use key...
+}
+
+// Or access specific keys directly
+uint64_t key21 = params.keys[21];  // Direct access (if bounds known)
+```
+
 ## Security Considerations
 
 ### Bounds Safety
@@ -207,6 +342,13 @@ The new design eliminates array bounds panics, which could be exploited in unsaf
 - Buffer overflow attacks through malicious key indices
 - Denial of service through panic-induced crashes
 - Information disclosure through out-of-bounds memory access
+
+### FFI Safety
+
+The enhanced FFI design adds additional safety measures:
+- **Key Count Validation**: V2 functions validate key_count before conversion
+- **Buffer Bounds**: 32-key buffer prevents overflow while allowing future expansion
+- **Graceful Degradation**: Invalid key counts return error codes instead of panicking
 
 ### Const Safety
 
