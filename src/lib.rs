@@ -622,7 +622,7 @@ mod lib {
     #[test]
     fn test_checksum_with_custom_params() {
         crate::cache::clear_cache();
-        
+
         // CRC-32 reflected
         assert_eq!(
             checksum_with_params(get_custom_crc32_reflected(), TEST_CHECK_STRING),
@@ -651,7 +651,7 @@ mod lib {
     #[test]
     fn test_get_custom_params() {
         crate::cache::clear_cache();
-        
+
         assert_eq!(
             checksum_with_params(get_custom_crc32_reflected(), TEST_CHECK_STRING),
             CRC32_ISCSI.check,
@@ -683,7 +683,7 @@ mod lib {
     #[test]
     fn test_digest_updates_check_with_custom_params() {
         crate::cache::clear_cache();
-        
+
         // CRC-32 reflected
         check_digest(
             Digest::new_with_params(get_custom_crc32_reflected()),
@@ -795,7 +795,7 @@ mod lib {
     #[test]
     fn test_combine_with_custom_params() {
         crate::cache::clear_cache();
-        
+
         // CRC-32 reflected
         let crc32_params = get_custom_crc32_reflected();
         let checksum1 = checksum_with_params(crc32_params, "1234".as_ref());
@@ -854,7 +854,7 @@ mod lib {
     #[test]
     fn test_checksum_file_with_custom_params() {
         crate::cache::clear_cache();
-        
+
         // Create a test file with repeating zeros
         let test_file_path = "test/test_crc32_hash_file_custom.bin";
         let data = vec![0u8; 1024 * 1024]; // 1 MiB of zeros
