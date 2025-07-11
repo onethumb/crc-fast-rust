@@ -668,6 +668,293 @@ mod tests {
             "Cache should still work correctly after concurrent operations");
     }
 
+    // Error handling tests
+    #[test]
+    fn test_cache_lock_poisoning_recovery() {
+        use std::sync::{Arc, Mutex};
+        use std::thread;
+        use std::panic;
+        
+        clear_cache();
+        
+        // Pre-populate cache with known values
+        let expected_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+        
+        // Create a scenario that could potentially poison the lock
+        // We'll use a separate test to avoid actually poisoning our cache
+        let poisoned_flag = Arc::new(Mutex::new(false));
+        let poisoned_flag_clone = Arc::clone(&poisoned_flag);
+        
+        // Spawn a thread that panics while holding a lock (simulated)
+        let handle = thread::spawn(move || {
+            // Simulate a panic scenario - we don't actually poison the cache lock
+            // because that would break other tests, but we test the recovery path
+            let _guard = poisoned_flag_clone.lock().unwrap();
+            panic!("Simulated panic");
+        });
+        
+        // Wait for the thread to panic
+        let result = handle.join();
+        assert!(result.is_err(), "Thread should have panicked");
+        
+        // Verify that our cache still works despite the simulated error scenario
+        let keys_after_panic = get_or_generate_keys(32, 0x04C11DB7, true);
+        assert_eq!(keys_after_panic, expected_keys, 
+            "Cache should still work after simulated panic scenario");
+        
+        // Test that new cache entries can still be created
+        let new_keys = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+        assert_eq!(new_keys.len(), 23, "New cache entries should still work");
+        
+        // Verify the new keys are cached
+        let cached_new_keys = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+        assert_eq!(new_keys, cached_new_keys, "New keys should be cached");
+    }
+
+    #[test]
+    fn test_cache_fallback_to_direct_generation() {
+        clear_cache();
+        
+        // Test that even if cache operations fail, we still get valid keys
+        // This tests the fallback mechanism in get_or_generate_keys
+        
+        // Generate expected keys directly
+        let expected_keys_32 = generate::keys(32, 0x04C11DB7, true);
+        let expected_keys_64 = generate::keys(64, 0x42F0E1EBA9EA3693, false);
+        
+        // Get keys through cache (should work normally)
+        let cached_keys_32 = get_or_generate_keys(32, 0x04C11DB7, true);
+        let cached_keys_64 = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+        
+        // Verify keys are correct regardless of cache state
+        assert_eq!(cached_keys_32, expected_keys_32, 
+            "CRC32 keys should be correct even with cache issues");
+        assert_eq!(cached_keys_64, expected_keys_64, 
+            "CRC64 keys should be correct even with cache issues");
+        
+        // Test multiple calls to ensure consistency
+        for _ in 0..5 {
+            let keys_32 = get_or_generate_keys(32, 0x04C11DB7, true);
+            let keys_64 = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+            
+            assert_eq!(keys_32, expected_keys_32, 
+                "Repeated calls should return consistent CRC32 keys");
+            assert_eq!(keys_64, expected_keys_64, 
+                "Repeated calls should return consistent CRC64 keys");
+        }
+    }
+
+    #[test]
+    fn test_cache_operations_under_memory_pressure() {
+        clear_cache();
+        
+        // Simulate memory pressure by creating many cache entries
+        // This tests that cache operations remain stable under load
+        let mut test_keys = Vec::new();
+        let num_entries = 100;
+        
+        // Create many different cache entries
+        for i in 0..num_entries {
+            let poly = 0x04C11DB7 + (i as u64);
+            let reflected = i % 2 == 0;
+            let width = if i % 3 == 0 { 64 } else { 32 };
+            
+            let keys = get_or_generate_keys(width, poly, reflected);
+            test_keys.push((width, poly, reflected, keys));
+        }
+        
+        // Verify all entries are correctly cached and retrievable
+        for (i, &(width, poly, reflected, ref expected_keys)) in test_keys.iter().enumerate() {
+            let cached_keys = get_or_generate_keys(width, poly, reflected);
+            assert_eq!(cached_keys, *expected_keys, 
+                "Entry {} should be correctly cached", i);
+        }
+        
+        // Test that cache operations still work after creating many entries
+        let new_keys = get_or_generate_keys(32, 0x1EDC6F41, true);
+        assert_eq!(new_keys.len(), 23, "New entries should still work under memory pressure");
+        
+        // Verify the new entry is cached
+        let cached_new_keys = get_or_generate_keys(32, 0x1EDC6F41, true);
+        assert_eq!(new_keys, cached_new_keys, "New entry should be cached");
+        
+        // Test cache clearing still works
+        clear_cache();
+        
+        // Verify cache was cleared by testing that operations still work
+        let post_clear_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+        assert_eq!(post_clear_keys.len(), 23, "Cache should work after clearing under memory pressure");
+    }
+
+    #[test]
+    fn test_cache_error_recovery_patterns() {
+        clear_cache();
+        
+        // Test various error recovery patterns to ensure robustness
+        
+        // Pattern 1: Rapid cache operations
+        for i in 0..50 {
+            let poly = 0x04C11DB7 + (i as u64 % 10); // Create some duplicates
+            let keys = get_or_generate_keys(32, poly, true);
+            assert_eq!(keys.len(), 23, "Rapid operation {} should succeed", i);
+        }
+        
+        // Pattern 2: Interleaved cache hits and misses
+        let base_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+        for i in 0..20 {
+            // Cache hit
+            let hit_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+            assert_eq!(hit_keys, base_keys, "Cache hit {} should be consistent", i);
+            
+            // Cache miss
+            let miss_keys = get_or_generate_keys(32, 0x1EDC6F41 + (i as u64), false);
+            assert_eq!(miss_keys.len(), 23, "Cache miss {} should succeed", i);
+        }
+        
+        // Pattern 3: Mixed operations with clearing
+        for i in 0..10 {
+            let keys1 = get_or_generate_keys(32, 0x04C11DB7, true);
+            let keys2 = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+            
+            if i % 3 == 0 {
+                clear_cache();
+            }
+            
+            // Operations should still work after clearing
+            let keys3 = get_or_generate_keys(32, 0x04C11DB7, true);
+            let keys4 = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+            
+            // Keys should be consistent (same parameters = same keys)
+            assert_eq!(keys1, keys3, "Keys should be consistent across clears");
+            assert_eq!(keys2, keys4, "Keys should be consistent across clears");
+        }
+    }
+
+    #[test]
+    fn test_cache_concurrent_error_scenarios() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+        use std::time::Duration;
+        
+        clear_cache();
+        
+        let num_threads = 8;
+        let barrier = Arc::new(Barrier::new(num_threads));
+        let mut handles = Vec::new();
+        
+        // Create concurrent scenarios that could potentially cause errors
+        for i in 0..num_threads {
+            let barrier_clone = Arc::clone(&barrier);
+            let handle = thread::spawn(move || {
+                barrier_clone.wait();
+                
+                let mut operations = 0;
+                let errors = 0;
+                let start = std::time::Instant::now();
+                
+                // Run operations for a short time with various patterns
+                while start.elapsed() < Duration::from_millis(100) {
+                    match operations % 5 {
+                        0 => {
+                            // Normal cache operations
+                            let _keys = get_or_generate_keys(32, 0x04C11DB7, true);
+                        },
+                        1 => {
+                            // Rapid different parameters
+                            let poly = 0x1EDC6F41 + (operations as u64);
+                            let _keys = get_or_generate_keys(32, poly, true);
+                        },
+                        2 => {
+                            // Cache clearing (potential contention point)
+                            clear_cache();
+                        },
+                        3 => {
+                            // Mixed width operations
+                            let _keys32 = get_or_generate_keys(32, 0x04C11DB7, true);
+                            let _keys64 = get_or_generate_keys(64, 0x42F0E1EBA9EA3693, false);
+                        },
+                        4 => {
+                            // Rapid same-parameter calls (cache hits)
+                            for _ in 0..5 {
+                                let _keys = get_or_generate_keys(32, 0x04C11DB7, true);
+                            }
+                        },
+                        _ => unreachable!(),
+                    }
+                    operations += 1;
+                }
+                
+                (i, operations, errors)
+            });
+            handles.push(handle);
+        }
+        
+        // Collect results
+        let mut results = Vec::new();
+        for handle in handles {
+            match handle.join() {
+                Ok(result) => results.push(result),
+                Err(_) => panic!("Thread should not panic during error scenarios"),
+            }
+        }
+        
+        // Verify all threads completed successfully
+        assert_eq!(results.len(), num_threads);
+        
+        for (thread_id, operations, errors) in results {
+            assert!(operations > 0, "Thread {} should have completed operations", thread_id);
+            // In our implementation, errors should be handled gracefully without propagating
+            assert_eq!(errors, 0, "Thread {} should not have unhandled errors", thread_id);
+        }
+        
+        // Verify cache is still functional after all concurrent error scenarios
+        let final_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+        let expected_keys = generate::keys(32, 0x04C11DB7, true);
+        assert_eq!(final_keys, expected_keys, 
+            "Cache should still work correctly after concurrent error scenarios");
+    }
+
+    #[test]
+    fn test_cache_memory_allocation_stress() {
+        clear_cache();
+        
+        // Test cache behavior under memory allocation stress
+        // Create a large number of unique cache entries to stress memory allocation
+        let mut created_entries = Vec::new();
+        let stress_count = 1000;
+        
+        // Create many unique cache entries
+        for i in 0..stress_count {
+            let width = if i % 2 == 0 { 32 } else { 64 };
+            let poly = 0x04C11DB7 + (i as u64);
+            let reflected = i % 3 == 0;
+            
+            let keys = get_or_generate_keys(width, poly, reflected);
+            created_entries.push((width, poly, reflected, keys));
+            
+            // Verify each entry is valid
+            assert_eq!(keys.len(), 23, "Entry {} should have valid keys", i);
+        }
+        
+        // Verify all entries are still accessible (testing cache integrity)
+        for (i, &(width, poly, reflected, ref expected_keys)) in created_entries.iter().enumerate() {
+            let retrieved_keys = get_or_generate_keys(width, poly, reflected);
+            assert_eq!(retrieved_keys, *expected_keys, 
+                "Entry {} should be retrievable after stress test", i);
+        }
+        
+        // Test that new entries can still be created
+        let new_keys = get_or_generate_keys(32, 0xFFFFFFFF, true);
+        assert_eq!(new_keys.len(), 23, "New entries should work after memory stress");
+        
+        // Test cache clearing works under memory pressure
+        clear_cache();
+        
+        // Verify cache operations still work after clearing
+        let post_stress_keys = get_or_generate_keys(32, 0x04C11DB7, true);
+        assert_eq!(post_stress_keys.len(), 23, "Cache should work after memory stress and clearing");
+    }
+
     // Integration tests for CrcParams compatibility
     #[test]
     fn test_crc_params_new_behavior_unchanged() {

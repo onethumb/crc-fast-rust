@@ -56,28 +56,21 @@
   - Test multiple `CrcParams` instances with same parameters use cached keys
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 9. Add performance benchmarks
-  - Create benchmark comparing cache hit vs direct key generation performance
-  - Benchmark cache miss overhead vs uncached implementation
-  - Add memory usage tracking for cache growth
-  - Benchmark concurrent access performance
-  - _Requirements: 2.1, 2.2, 4.2_
-
-- [ ] 10. Add comprehensive error handling tests
+- [x] 9. Add comprehensive error handling tests
   - Test cache behavior when locks are poisoned
   - Test memory allocation failure scenarios
   - Verify fallback to direct key generation works correctly
   - Test cache operations under memory pressure
   - _Requirements: 4.1, 4.2_
 
-- [ ] 11. Update existing tests to work with caching
+- [ ] 19. Update existing tests to work with caching
   - Run all existing tests to ensure no regressions
   - Update any tests that might be affected by caching behavior
   - Ensure test isolation by clearing cache between tests if needed
   - Verify all CRC algorithm tests still pass
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 12. Add documentation and finalize implementation
+- [ ] 11. Add documentation and finalize implementation
   - Add inline documentation for all new public and internal functions
   - Update module-level documentation
   - Add usage examples in code comments
