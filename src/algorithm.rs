@@ -21,6 +21,37 @@ use crate::structs::CrcState;
 use crate::traits::{ArchOps, EnhancedCrcWidth};
 use crate::{crc32, crc64, CrcParams};
 
+/// Extract keys from CrcParams using safe accessor methods
+/// This ensures bounds checking and future compatibility
+#[inline(always)]
+fn extract_keys_array(params: CrcParams) -> [u64; 23] {
+    [
+        params.get_key(0),
+        params.get_key(1),
+        params.get_key(2),
+        params.get_key(3),
+        params.get_key(4),
+        params.get_key(5),
+        params.get_key(6),
+        params.get_key(7),
+        params.get_key(8),
+        params.get_key(9),
+        params.get_key(10),
+        params.get_key(11),
+        params.get_key(12),
+        params.get_key(13),
+        params.get_key(14),
+        params.get_key(15),
+        params.get_key(16),
+        params.get_key(17),
+        params.get_key(18),
+        params.get_key(19),
+        params.get_key(20),
+        params.get_key(21),
+        params.get_key(22),
+    ]
+}
+
 /// Main entry point that works for both CRC-32 and CRC-64
 #[inline]
 #[cfg_attr(
@@ -65,13 +96,19 @@ where
             bytes,
             &mut crc_state,
             reflector,
-            params.keys,
+            extract_keys_array(params),
             ops,
         );
     }
 
     // Process large inputs with SIMD-optimized approach
-    process_large_aligned::<T, W>(bytes, &mut crc_state, reflector, params.keys, ops)
+    process_large_aligned::<T, W>(
+        bytes,
+        &mut crc_state,
+        reflector,
+        extract_keys_array(params),
+        ops,
+    )
 }
 
 /// Process data with the selected strategy

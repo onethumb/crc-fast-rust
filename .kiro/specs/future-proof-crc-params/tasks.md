@@ -8,24 +8,24 @@
   - Write comprehensive unit tests for CrcKeysStorage functionality
   - _Requirements: 4.1, 4.2, 4.4, 5.1_
 
-- [ ] 2. Phase 2: Update architecture code to use safe accessors
-  - [ ] 2.1 Update SIMD folding code in src/arch/ to use params.get_key()
+- [x] 2. Phase 2: Update architecture code to use safe accessors
+  - [x] 2.1 Update SIMD folding code in src/arch/ to use params.get_key()
     - Replace direct keys[index] access with params.get_key(index) in algorithm.rs
     - Update VPCLMULQDQ code to use safe key access methods
     - Update aarch64 and x86 architecture-specific code
     - _Requirements: 3.1, 5.2_
 
-  - [ ] 2.2 Update CRC32 algorithm code to use safe accessors
+  - [x] 2.2 Update CRC32 algorithm code to use safe accessors
     - Modify src/crc32/algorithm.rs to use params.get_key() instead of keys[index]
     - Update fusion code in src/crc32/fusion/ if it accesses keys directly
     - _Requirements: 3.1, 5.2_
 
-  - [ ] 2.3 Update CRC64 algorithm code to use safe accessors
+  - [x] 2.3 Update CRC64 algorithm code to use safe accessors
     - Modify src/crc64/algorithm.rs to use params.get_key() instead of keys[index]
     - Update any other CRC64-specific code that accesses keys directly
     - _Requirements: 3.1, 5.2_
 
-  - [ ] 2.4 Run performance benchmarks to verify zero overhead
+  - [x] 2.4 Run performance benchmarks to verify zero overhead
     - Benchmark key access performance before and after changes
     - Verify compiler optimizations eliminate any performance regression
     - Document that performance remains identical to direct array access
