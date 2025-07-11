@@ -7,6 +7,7 @@
 
 pub(crate) mod consts;
 pub(crate) mod enums;
+mod future_proof;
 mod structs;
 
 /// Creates a new aligned data vector from the input slice for testing.
