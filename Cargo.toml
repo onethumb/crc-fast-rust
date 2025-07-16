@@ -22,12 +22,12 @@ bench = true
 crc = "3"
 digest = {  version = "0.10", features = ["alloc"] }
 rand = "0.9"
-libc = "0.2.171"
-regex = "1.11.1"
+libc = "0.2"
+regex = "1.11"
 
 [dev-dependencies]
-criterion = "0.5"
-cbindgen = "0.28"
+criterion = "0.6"
+cbindgen = "0.29"
 
 # lto=true has a big improvement in performance
 [profile.release]
