@@ -422,13 +422,13 @@ pub extern "C" fn crc_fast_checksum_combine(
 
 /// Combine two CRC checksums using custom parameters
 #[no_mangle]
-pub extern "C" fn crc_fast_checksum_combine_with_custom_params(
+pub extern "C" fn crc_fast_checksum_combine_with_params(
     params: CrcFastParams,
     checksum1: u64,
     checksum2: u64,
     checksum2_len: u64,
 ) -> u64 {
-    crate::checksum_combine_with_custom_params(params.into(), checksum1, checksum2, checksum2_len)
+    crate::checksum_combine_with_params(params.into(), checksum1, checksum2, checksum2_len)
 }
 
 /// Returns the custom CRC parameters for a given set of Rocksoft CRC parameters

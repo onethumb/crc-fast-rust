@@ -583,7 +583,7 @@ pub fn checksum_combine(
 }
 
 /// Combines two CRC checksums using the custom specified parameters.
-pub fn checksum_combine_with_custom_params(
+pub fn checksum_combine_with_params(
     params: CrcParams,
     checksum1: u64,
     checksum2: u64,
@@ -885,7 +885,7 @@ mod lib {
         let checksum1 = checksum_with_params(crc32_params, "1234".as_ref());
         let checksum2 = checksum_with_params(crc32_params, "56789".as_ref());
         assert_eq!(
-            checksum_combine_with_custom_params(crc32_params, checksum1, checksum2, 5),
+            checksum_combine_with_params(crc32_params, checksum1, checksum2, 5),
             CRC32_ISCSI.check,
         );
 
@@ -894,7 +894,7 @@ mod lib {
         let checksum1 = checksum_with_params(crc32_params, "1234".as_ref());
         let checksum2 = checksum_with_params(crc32_params, "56789".as_ref());
         assert_eq!(
-            checksum_combine_with_custom_params(crc32_params, checksum1, checksum2, 5),
+            checksum_combine_with_params(crc32_params, checksum1, checksum2, 5),
             CRC32_BZIP2.check,
         );
 
@@ -903,7 +903,7 @@ mod lib {
         let checksum1 = checksum_with_params(crc64_params, "1234".as_ref());
         let checksum2 = checksum_with_params(crc64_params, "56789".as_ref());
         assert_eq!(
-            checksum_combine_with_custom_params(crc64_params, checksum1, checksum2, 5),
+            checksum_combine_with_params(crc64_params, checksum1, checksum2, 5),
             CRC64_NVME.check,
         );
 
@@ -912,7 +912,7 @@ mod lib {
         let checksum1 = checksum_with_params(crc64_params, "1234".as_ref());
         let checksum2 = checksum_with_params(crc64_params, "56789".as_ref());
         assert_eq!(
-            checksum_combine_with_custom_params(crc64_params, checksum1, checksum2, 5),
+            checksum_combine_with_params(crc64_params, checksum1, checksum2, 5),
             CRC64_ECMA_182.check,
         );
     }

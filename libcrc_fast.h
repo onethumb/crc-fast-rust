@@ -155,10 +155,10 @@ uint64_t crc_fast_checksum_combine(enum CrcFastAlgorithm algorithm,
 /**
  * Combine two CRC checksums using custom parameters
  */
-uint64_t crc_fast_checksum_combine_with_custom_params(struct CrcFastParams params,
-                                                      uint64_t checksum1,
-                                                      uint64_t checksum2,
-                                                      uint64_t checksum2_len);
+uint64_t crc_fast_checksum_combine_with_params(struct CrcFastParams params,
+                                               uint64_t checksum1,
+                                               uint64_t checksum2,
+                                               uint64_t checksum2_len);
 
 /**
  * Returns the custom CRC parameters for a given set of Rocksoft CRC parameters
