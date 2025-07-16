@@ -104,6 +104,31 @@
 //!
 //! assert_eq!(checksum.unwrap(), 0xcbf43926);
 //! ```
+//!
+//! ## Custom CRC Parameters
+//!
+//! For cases where you need to use CRC variants not included in the predefined algorithms,
+//! you can define custom CRC parameters using `CrcParams::new()` and use the `*_with_params` functions.
+//!
+//! ## checksum_with_params
+//!```rust
+//! use crc_fast::{checksum_with_params, CrcParams};
+//!
+//! // Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+//! let custom_params = CrcParams::new(
+//!     "CRC-32/CUSTOM",
+//!     32,
+//!     0x04c11db7,
+//!     0xffffffff,
+//!     true,
+//!     0xffffffff,
+//!     0xcbf43926,
+//! );
+//!
+//! let checksum = checksum_with_params(custom_params, b"123456789");
+//!
+//! assert_eq!(checksum, 0xcbf43926);
+//! ```
 
 use crate::crc32::consts::{
     CRC32_AIXM, CRC32_AUTOSAR, CRC32_BASE91_D, CRC32_BZIP2, CRC32_CD_ROM_EDC, CRC32_CKSUM,
@@ -363,7 +388,30 @@ impl Digest {
         }
     }
 
-    /// Creates a new `Digest` instance with custom parameters.
+    /// Creates a new `Digest` instance with custom CRC parameters.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use crc_fast::{Digest, CrcParams};
+    ///
+    /// // Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+    /// let custom_params = CrcParams::new(
+    ///     "CRC-32/CUSTOM",
+    ///     32,
+    ///     0x04c11db7,
+    ///     0xffffffff,
+    ///     true,
+    ///     0xffffffff,
+    ///     0xcbf43926,
+    /// );
+    ///
+    /// let mut digest = Digest::new_with_params(custom_params);
+    /// digest.update(b"123456789");
+    /// let checksum = digest.finalize();
+    ///
+    /// assert_eq!(checksum, 0xcbf43926);
+    /// ```
     #[inline(always)]
     pub fn new_with_params(params: CrcParams) -> Self {
         let calculator = Calculator::calculate as CalculatorFn;
@@ -476,7 +524,28 @@ pub fn checksum(algorithm: CrcAlgorithm, buf: &[u8]) -> u64 {
     calculator(params.init, buf, params) ^ params.xorout
 }
 
-/// Computes the CRC checksum for the given data using the custom specified parameters.
+/// Computes the CRC checksum for the given data using custom CRC parameters.
+///
+/// # Examples
+///
+/// ```rust
+/// use crc_fast::{checksum_with_params, CrcParams};
+///
+/// // Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+/// let custom_params = CrcParams::new(
+///     "CRC-32/CUSTOM",
+///     32,
+///     0x04c11db7,
+///     0xffffffff,
+///     true,
+///     0xffffffff,
+///     0xcbf43926,
+/// );
+///
+/// let checksum = checksum_with_params(custom_params, b"123456789");
+///
+/// assert_eq!(checksum, 0xcbf43926);
+/// ```
 pub fn checksum_with_params(params: CrcParams, buf: &[u8]) -> u64 {
     let calculator = Calculator::calculate as CalculatorFn;
 
@@ -514,11 +583,39 @@ pub fn checksum_file(
     checksum_file_with_digest(Digest::new(algorithm), path, chunk_size)
 }
 
-/// Computes the CRC checksum for the given file using the custom specified parameters.
+/// Computes the CRC checksum for the given file using custom CRC parameters.
+///
+/// Appears to be much faster (~2X) than using Writer and io::*, at least on Apple M2 Ultra
 ///
 /// # Errors
 ///
 /// This function will return an error if the file cannot be read.
+///
+/// # Examples
+///
+/// ```rust
+/// use std::env;
+/// use crc_fast::{checksum_file_with_params, CrcParams};
+///
+/// // for example/test purposes only, use your own file path
+/// let file_path = env::current_dir().expect("missing working dir").join("crc-check.txt");
+/// let file_on_disk = file_path.to_str().unwrap();
+///
+/// // Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+/// let custom_params = CrcParams::new(
+///     "CRC-32/CUSTOM",
+///     32,
+///     0x04c11db7,
+///     0xffffffff,
+///     true,
+///     0xffffffff,
+///     0xcbf43926,
+/// );
+///
+/// let checksum = checksum_file_with_params(custom_params, file_on_disk, None);
+///
+/// assert_eq!(checksum.unwrap(), 0xcbf43926);
+/// ```
 pub fn checksum_file_with_params(
     params: CrcParams,
     path: &str,
@@ -582,7 +679,30 @@ pub fn checksum_combine(
     combine::checksums(checksum1, checksum2, checksum2_len, params)
 }
 
-/// Combines two CRC checksums using the custom specified parameters.
+/// Combines two CRC checksums using custom CRC parameters.
+///
+/// # Examples
+///
+/// ```rust
+/// use crc_fast::{checksum_with_params, checksum_combine_with_params, CrcParams};
+///
+/// // Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+/// let custom_params = CrcParams::new(
+///     "CRC-32/CUSTOM",
+///     32,
+///     0x04c11db7,
+///     0xffffffff,
+///     true,
+///     0xffffffff,
+///     0xcbf43926,
+/// );
+///
+/// let checksum_1 = checksum_with_params(custom_params, b"1234");
+/// let checksum_2 = checksum_with_params(custom_params, b"56789");
+/// let checksum = checksum_combine_with_params(custom_params, checksum_1, checksum_2, 5);
+///
+/// assert_eq!(checksum, 0xcbf43926);
+/// ```
 pub fn checksum_combine_with_params(
     params: CrcParams,
     checksum1: u64,

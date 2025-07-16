@@ -142,6 +142,111 @@ let checksum = checksum_file(Crc32IsoHdlc, file_on_disk, None);
 assert_eq!(checksum.unwrap(), 0xcbf43926);
  ```
 
+## Custom CRC Parameters
+
+For cases where you need to use CRC variants not included in the predefined algorithms, you can define custom CRC parameters and use the `*_with_params` functions.
+
+### Digest with custom parameters
+
+Creates a `Digest` with custom CRC parameters for stream processing.
+
+```rust
+use crc_fast::{Digest, CrcParams};
+
+// Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+let custom_params = CrcParams::new(
+    "CRC-32/CUSTOM",
+    32,
+    0x04c11db7,
+    0xffffffff,
+    true,
+    0xffffffff,
+    0xcbf43926,
+);
+
+let mut digest = Digest::new_with_params(custom_params);
+digest.update(b"123456789");
+let checksum = digest.finalize();
+
+assert_eq!(checksum, 0xcbf43926);
+```
+
+### checksum_with_params
+
+Checksums data using custom CRC parameters.
+
+```rust
+use crc_fast::{checksum_with_params, CrcParams};
+
+// Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+let custom_params = CrcParams::new(
+    "CRC-32/CUSTOM",
+    32,
+    0x04c11db7,
+    0xffffffff,
+    true,
+    0xffffffff,
+    0xcbf43926,
+);
+
+let checksum = checksum_with_params(custom_params, b"123456789");
+
+assert_eq!(checksum, 0xcbf43926);
+```
+
+### checksum_combine_with_params
+
+Combines checksums from two different sources using custom CRC parameters.
+
+```rust
+use crc_fast::{checksum_with_params, checksum_combine_with_params, CrcParams};
+
+// Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+let custom_params = CrcParams::new(
+    "CRC-32/CUSTOM",
+    32,
+    0x04c11db7,
+    0xffffffff,
+    true,
+    0xffffffff,
+    0xcbf43926,
+);
+
+let checksum_1 = checksum_with_params(custom_params, b"1234");
+let checksum_2 = checksum_with_params(custom_params, b"56789");
+let checksum = checksum_combine_with_params(custom_params, checksum_1, checksum_2, 5);
+
+assert_eq!(checksum, 0xcbf43926);
+```
+
+### checksum_file_with_params
+
+Checksums a file using custom CRC parameters, chunking through the file optimally.
+
+```rust
+use std::env;
+use crc_fast::{checksum_file_with_params, CrcParams};
+
+// for example/test purposes only, use your own file path
+let binding = env::current_dir().expect("missing working dir").join("crc-check.txt");
+let file_on_disk = binding.to_str().unwrap();
+
+// Define custom CRC-32 parameters (equivalent to CRC-32/ISO-HDLC)
+let custom_params = CrcParams::new(
+    "CRC-32/CUSTOM",
+    32,
+    0x04c11db7,
+    0xffffffff,
+    true,
+    0xffffffff,
+    0xcbf43926,
+);
+
+let checksum = checksum_file_with_params(custom_params, file_on_disk, None);
+
+assert_eq!(checksum.unwrap(), 0xcbf43926);
+```
+
 ## C/C++ compatible shared library
 
 `cargo build` will produce a shared library target (`.so` on Linux, `.dll` on Windows, `.dylib` on macOS, etc) and an
