@@ -468,7 +468,7 @@ pub extern "C" fn crc_fast_get_custom_params(
         algorithm: match width {
             32 => CrcFastAlgorithm::Crc32Custom,
             64 => CrcFastAlgorithm::Crc64Custom,
-            _ => panic!("Unsupported width: {}", width),
+            _ => panic!("Unsupported width: {width}",),
         },
         width: params.width,
         poly: params.poly,

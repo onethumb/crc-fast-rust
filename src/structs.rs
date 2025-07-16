@@ -64,7 +64,7 @@ impl CrcParams {
         let algorithm = match width {
             32 => CrcAlgorithm::Crc32Custom,
             64 => CrcAlgorithm::Crc64Custom,
-            _ => panic!("Unsupported width: {}", width),
+            _ => panic!("Unsupported width: {width}",),
         };
 
         Self {

@@ -40,10 +40,10 @@ impl Config {
 
 fn parse_hex_or_decimal(s: &str) -> Result<u64, String> {
     if s.starts_with("0x") || s.starts_with("0X") {
-        u64::from_str_radix(&s[2..], 16).map_err(|_| format!("Invalid hexadecimal value: {}", s))
+        u64::from_str_radix(&s[2..], 16).map_err(|_| format!("Invalid hexadecimal value: {s}",))
     } else {
         s.parse::<u64>()
-            .map_err(|_| format!("Invalid decimal value: {}", s))
+            .map_err(|_| format!("Invalid decimal value: {s}",))
     }
 }
 
@@ -51,7 +51,7 @@ fn parse_bool(s: &str) -> Result<bool, String> {
     match s.to_lowercase().as_str() {
         "true" | "1" | "yes" | "on" => Ok(true),
         "false" | "0" | "no" | "off" => Ok(false),
-        _ => Err(format!("Invalid boolean value: {} (use true/false)", s)),
+        _ => Err(format!("Invalid boolean value: {s} (use true/false)",)),
     }
 }
 
@@ -115,7 +115,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
                 i += 2;
             }
             arg => {
-                return Err(format!("Unknown argument: {}", arg));
+                return Err(format!("Unknown argument: {arg}",));
             }
         }
     }
@@ -150,7 +150,7 @@ fn main() -> ExitCode {
     let config = match parse_args(&args) {
         Ok(config) => config,
         Err(error) => {
-            eprintln!("Error: {}", error);
+            eprintln!("Error: {error}",);
             println!();
             print_usage();
             return ExitCode::from(1);
@@ -178,7 +178,7 @@ fn main() -> ExitCode {
     );
 
     println!();
-    println!("// Generated CRC parameters for {}", static_name);
+    println!("// Generated CRC parameters for {static_name}",);
     println!(
         "pub const {}: CrcParams = CrcParams {{",
         static_name
@@ -194,7 +194,7 @@ fn main() -> ExitCode {
             "Crc64"
         }
     );
-    println!("    name: \"{}\",", static_name);
+    println!("    name: \"{static_name}\",",);
     println!("    width: {},", config.width.unwrap());
     println!("    poly: 0x{:x},", config.polynomial.unwrap());
     println!("    init: 0x{:x},", config.init.unwrap());
@@ -207,7 +207,7 @@ fn main() -> ExitCode {
     // Print the keys array
     for i in 0..23 {
         let key = params.get_key(i);
-        println!("        0x{:016x},", key);
+        println!("        0x{key:016x},",);
     }
 
     println!("    ]),");

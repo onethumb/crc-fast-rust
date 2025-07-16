@@ -29,19 +29,19 @@ fn aarch64_features() {
     println!("[AArch64] Checking for features...");
 
     if is_aarch64_feature_detected!("neon") {
-        println!("  {} NEON", checkmark);
+        println!("  {checkmark} NEON",);
     } else {
         println!("  x NEON");
     }
 
     if is_aarch64_feature_detected!("crc") {
-        println!("  {} CRC", checkmark);
+        println!("  {checkmark} CRC",);
     } else {
         println!("  x CRC");
     }
 
     if is_aarch64_feature_detected!("sha3") {
-        println!("  {} SHA3\n", checkmark);
+        println!("  {checkmark} SHA3\n",);
     } else {
         println!("  x SHA3\n");
     }
@@ -54,43 +54,43 @@ fn x86_features() {
     println!("[X86] Checking for features...");
 
     if is_x86_feature_detected!("sse2") {
-        println!("  {} SSE2", checkmark);
+        println!("  {checkmark} SSE2",);
     } else {
         println!("  x SSE2");
     }
 
     if is_x86_feature_detected!("sse4.1") {
-        println!("  {} SSE4.1", checkmark);
+        println!("  {checkmark} SSE4.1",);
     } else {
         println!("  x SSE4.1");
     }
 
     if is_x86_feature_detected!("pclmulqdq") {
-        println!("  {} PCLMULQDQ", checkmark);
+        println!("  {checkmark} PCLMULQDQ",);
     } else {
         println!("  x PCLMULQDQ");
     }
 
     if is_x86_feature_detected!("avx2") {
-        println!("  {} AVX2", checkmark);
+        println!("  {checkmark} AVX2",);
     } else {
         println!("  x AVX2");
     }
 
     if is_x86_feature_detected!("vpclmulqdq") {
-        println!("  {} VPCLMULQDQ", checkmark);
+        println!("  {checkmark} VPCLMULQDQ",);
     } else {
         println!("  x VPCLMULQDQ");
     }
 
     if is_x86_feature_detected!("avx512f") {
-        println!("  {} AVX512F", checkmark);
+        println!("  {checkmark} AVX512F",);
     } else {
         println!("  x AVX512F");
     }
 
     if is_x86_feature_detected!("avx512vl") {
-        println!("  {} AVX512VL\n", checkmark);
+        println!("  {checkmark} AVX512VL\n",);
     } else {
         println!("  x AVX512VL\n");
     }
@@ -125,7 +125,7 @@ fn print_cpu_info() {
     if let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo") {
         // Split the content by double newlines and take the first entry
         if let Some(first_cpu) = cpuinfo.split("\n\n").next() {
-            println!("{}", first_cpu);
+            println!("{first_cpu}",);
         } else {
             println!("No CPU information found.");
         }
