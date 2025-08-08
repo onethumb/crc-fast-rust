@@ -13,6 +13,7 @@ jobs:
         os: [ubuntu-latest, ubuntu-22.04-arm, ubuntu-24.04-arm, macos-latest]
         rust-toolchain:
           - "1.81" # minimum for this crate
+          - "1.89" # when VPCLMULQDQ was stabilized
           - "stable"
           - "nightly"
     runs-on: ${{ matrix.os }}
@@ -44,6 +45,7 @@ jobs:
         target: [i586-unknown-linux-gnu, i686-unknown-linux-gnu]
         rust-toolchain:
           - "1.81" # minimum for this crate
+          - "1.89" # when VPCLMULQDQ was stabilized
           - "stable"
           - "nightly"
     steps:
@@ -69,6 +71,7 @@ jobs:
         target: [powerpc-unknown-linux-gnu, powerpc64-unknown-linux-gnu]
         rust-toolchain:
           - "1.81" # minimum for this crate
+          - "1.89" # when VPCLMULQDQ was stabilized
           - "stable"
           - "nightly"
     steps:

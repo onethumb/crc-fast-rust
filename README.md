@@ -5,22 +5,22 @@
 [![Latest Version](https://img.shields.io/crates/v/crc-fast.svg)](https://crates.io/crates/crc-fast)
 [![Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/crc-fast)
 
-Fast, hardware-accelerated CRC calculation for
-[all known CRC-32 and CRC-64 variants](https://reveng.sourceforge.io/crc-catalogue/all.htm) using SIMD intrinsics,
+World's fastest generic CRC calculator for
+[all known CRC-32 and CRC-64 variants](https://reveng.sourceforge.io/crc-catalogue/all.htm), as well as bring-your-own
+custom parameters, using SIMD intrinsics,
 which can exceed [100GiB/s](#performance) on modern systems.
 
-Supports acceleration on `aarch64`, `x86_64`, and `x86` architectures, plus has a safe non-accelerated table-based 
+Supports acceleration on `aarch64`, `x86_64`, and `x86` architectures, plus has a safe non-accelerated table-based
 software fallback for others.
 
 The [crc crate](https://crates.io/crates/crc) is ~0.5GiB/s by default, so this is
-[up to >220X faster](#tldr-just-tell-me-how-to-turn-it-up-to-11-), and even the most conservative baseline settings
-are >27X.
+[up to >220X faster](#tldr-just-tell-me-how-to-turn-it-up-to-11-).
 
 This is unique, not just because of the performance, but also because I couldn't find a single generic SIMD-accelerated
 implementation (in any language) which worked for _all_ known variants, using the
 [Rocksoft model](http://www.ross.net/crc/download/crc_v3.txt), especially the "non-reflected" variants.
 
-So I wrote one.
+So I wrote one. :)
 
 ## Other languages
 
@@ -144,7 +144,8 @@ assert_eq!(checksum.unwrap(), 0xcbf43926);
 
 ## Custom CRC Parameters
 
-For cases where you need to use CRC variants not included in the predefined algorithms, you can define custom CRC parameters and use the `*_with_params` functions.
+For cases where you need to use CRC variants not included in the predefined algorithms, you can define custom CRC
+parameters and use the `*_with_params` functions.
 
 ### Digest with custom parameters
 
