@@ -211,6 +211,7 @@ dependencies = [
  "libc",
  "rand",
  "regex",
+ "rustversion",
 ]
 
 [[package]]
