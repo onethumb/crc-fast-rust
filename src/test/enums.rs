@@ -3,9 +3,9 @@
 #![cfg(test)]
 #![allow(dead_code)]
 
-use crate::structs::CrcParams;
 use crate::test::structs::*;
 use crate::CrcAlgorithm;
+use crate::CrcParams;
 use crc::Crc;
 
 pub enum AnyCrcTestConfig {
@@ -54,7 +54,7 @@ impl AnyCrcTestConfig {
     }
 
     pub fn get_keys(&self) -> [u64; 23] {
-        self.get_params().keys
+        self.get_params().keys.to_keys_array_23()
     }
 
     pub fn checksum_with_reference(&self, data: &[u8]) -> u64 {
