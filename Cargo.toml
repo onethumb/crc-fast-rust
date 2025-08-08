@@ -26,7 +26,7 @@ libc = "0.2"
 regex = "1.11"
 
 [dev-dependencies]
-criterion = "0.6"
+criterion = "0.7"
 cbindgen = "0.29"
 
 # lto=true has a big improvement in performance
