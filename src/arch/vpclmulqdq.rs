@@ -47,6 +47,7 @@ struct Simd512(__m512i);
 impl Simd512 {
     #[inline]
     #[target_feature(enable = "avx512f")]
+    #[allow(clippy::too_many_arguments)]
     unsafe fn new(x7: u64, x6: u64, x5: u64, x4: u64, x3: u64, x2: u64, x1: u64, x0: u64) -> Self {
         Self(_mm512_set_epi64(
             x7 as i64, x6 as i64, x5 as i64, x4 as i64, x3 as i64, x2 as i64, x1 as i64, x0 as i64,
