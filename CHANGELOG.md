@@ -1,5 +1,10 @@
 # Changes for crc-fast-rust
 
+## [1.4.0](https://github.com/awesomized/crc-fast-rust/releases/tag/1.4.0) - 2025-08-08
+* [Support custom CRC parameters](https://github.com/awesomized/crc-fast-rust/pull/11)
+* [Add checksum command-line utility](https://github.com/awesomized/crc-fast-rust/pull/12)
+* [Remove bindgen](https://github.com/awesomized/crc-fast-rust/pull/13)
+
 ## [1.3.0](https://github.com/awesomized/crc-fast-rust/releases/tag/1.3.0) - 2025-06-10
 * [Replace C bindings for CRC32 fusion calculation](https://github.com/awesomized/crc-fast-rust/pull/9)
 * [Improve VPCLMULQDQ to use 512-bit wide registers](https://github.com/awesomized/crc-fast-rust/pull/8)

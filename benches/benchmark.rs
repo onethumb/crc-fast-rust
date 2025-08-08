@@ -5,6 +5,7 @@ use crc_fast::CrcAlgorithm;
 use criterion::*;
 use rand::{rng, RngCore};
 use std::time::Duration;
+use std::hint::black_box;
 
 pub const SIZES: &[(&str, i32); 2] = &[
     ("1 MiB", 1024 * 1024),

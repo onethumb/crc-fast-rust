@@ -68,7 +68,7 @@ pub fn keys(width: u8, poly: u64, reflected: bool) -> [u64; 23] {
     } else if 64 == width {
         CRC64_EXPONENTS
     } else {
-        panic!("Unsupported width: {}", width);
+        panic!("Unsupported width: {width}",);
     };
 
     let poly = if 32 == width {
@@ -93,7 +93,7 @@ fn key(width: u8, poly: u64, reflected: bool, exponent: u64) -> u64 {
     } else if width == 64 {
         crc64_key(exponent, reflected, poly)
     } else {
-        panic!("Unsupported width: {}", width);
+        panic!("Unsupported width: {width}",);
     }
 }
 
@@ -148,7 +148,7 @@ fn polynomial(width: u8, polynomial: u64, reflected: bool) -> u64 {
     } else if width == 64 {
         crc64_polynomial(polynomial, reflected)
     } else {
-        panic!("Unsupported width: {}", width);
+        panic!("Unsupported width: {width}",);
     }
 }
 
@@ -178,7 +178,7 @@ fn mu(width: u8, polynomial: u64, reflected: bool) -> u64 {
     } else if width == 64 {
         crc64_mu(polynomial, reflected)
     } else {
-        panic!("Unsupported width: {}", width);
+        panic!("Unsupported width: {width}",);
     }
 }
 

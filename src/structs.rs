@@ -2,27 +2,13 @@
 
 #![allow(dead_code)]
 
-use crate::arch;
 use crate::traits::{CrcCalculator, CrcWidth};
-use crate::CrcAlgorithm;
-
-#[derive(Clone, Copy, Debug)]
-pub struct CrcParams {
-    pub algorithm: CrcAlgorithm,
-    pub name: &'static str,
-    pub width: u8,
-    pub poly: u64,
-    pub init: u64,
-    pub refin: bool,
-    pub refout: bool,
-    pub xorout: u64,
-    pub check: u64,
-    pub keys: [u64; 23],
-}
+use crate::{arch, cache, CrcAlgorithm, CrcParams};
 
 /// CRC-32 width implementation
 #[derive(Clone, Copy)]
 pub struct Width32;
+
 impl CrcWidth for Width32 {
     const WIDTH: u32 = 32;
     type Value = u32;
@@ -50,5 +36,72 @@ impl CrcCalculator for Calculator {
     #[inline(always)]
     fn calculate(state: u64, data: &[u8], params: CrcParams) -> u64 {
         unsafe { arch::update(state, data, params) }
+    }
+}
+
+impl CrcParams {
+    /// Creates custom CRC parameters for a given set of Rocksoft CRC parameters.
+    ///
+    /// Uses an internal cache to avoid regenerating folding keys for identical parameter sets.
+    /// The first call with a given set of parameters will generate and cache the keys, while
+    /// subsequent calls with the same parameters will use the cached keys for optimal performance.
+    ///
+    /// Does not support mis-matched refin/refout parameters, so both must be true or both false.
+    ///
+    /// Rocksoft parameters for lots of variants: https://reveng.sourceforge.io/crc-catalogue/all.htm
+    pub fn new(
+        name: &'static str,
+        width: u8,
+        poly: u64,
+        init: u64,
+        reflected: bool,
+        xorout: u64,
+        check: u64,
+    ) -> Self {
+        let keys_array = cache::get_or_generate_keys(width, poly, reflected);
+        let keys = crate::CrcKeysStorage::from_keys_fold_256(keys_array);
+
+        let algorithm = match width {
+            32 => CrcAlgorithm::Crc32Custom,
+            64 => CrcAlgorithm::Crc64Custom,
+            _ => panic!("Unsupported width: {width}",),
+        };
+
+        Self {
+            algorithm,
+            name,
+            width,
+            poly,
+            init,
+            refin: reflected,
+            refout: reflected,
+            xorout,
+            check,
+            keys,
+        }
+    }
+
+    /// Gets a key at the specified index, returning 0 if out of bounds.
+    /// This provides safe access regardless of internal key storage format.
+    #[inline(always)]
+    pub fn get_key(self, index: usize) -> u64 {
+        self.keys.get_key(index)
+    }
+
+    /// Gets a key at the specified index, returning None if out of bounds.
+    /// This provides optional key access for cases where bounds checking is needed.
+    #[inline(always)]
+    pub fn get_key_checked(self, index: usize) -> Option<u64> {
+        if index < self.keys.key_count() {
+            Some(self.keys.get_key(index))
+        } else {
+            None
+        }
+    }
+
+    /// Returns the number of keys available in this CrcParams instance.
+    #[inline(always)]
+    pub fn key_count(self) -> usize {
+        self.keys.key_count()
     }
 }
