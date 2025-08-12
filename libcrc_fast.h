@@ -78,6 +78,12 @@ extern "C" {
 struct CrcFastDigestHandle *crc_fast_digest_new(enum CrcFastAlgorithm algorithm);
 
 /**
+ * Creates a new Digest with a custom initial state
+ */
+struct CrcFastDigestHandle *crc_fast_digest_new_with_init_state(enum CrcFastAlgorithm algorithm,
+                                                                uint64_t init_state);
+
+/**
  * Creates a new Digest to compute CRC checksums using custom parameters
  */
 struct CrcFastDigestHandle *crc_fast_digest_new_with_params(struct CrcFastParams params);
@@ -117,6 +123,11 @@ void crc_fast_digest_combine(struct CrcFastDigestHandle *handle1,
  * Gets the amount of data processed by the Digest so far
  */
 uint64_t crc_fast_digest_get_amount(struct CrcFastDigestHandle *handle);
+
+/**
+ * Gets the current state of the Digest
+ */
+uint64_t crc_fast_digest_get_state(struct CrcFastDigestHandle *handle);
 
 /**
  * Helper method to calculate a CRC checksum directly for a string using algorithm

@@ -219,6 +219,17 @@ pub extern "C" fn crc_fast_digest_new(algorithm: CrcFastAlgorithm) -> *mut CrcFa
     Box::into_raw(handle)
 }
 
+/// Creates a new Digest with a custom initial state
+#[no_mangle]
+pub extern "C" fn crc_fast_digest_new_with_init_state(
+    algorithm: CrcFastAlgorithm,
+    init_state: u64,
+) -> *mut CrcFastDigestHandle {
+    let digest = Box::new(Digest::new_with_init_state(algorithm.into(), init_state));
+    let handle = Box::new(CrcFastDigestHandle(Box::into_raw(digest)));
+    Box::into_raw(handle)
+}
+
 /// Creates a new Digest to compute CRC checksums using custom parameters
 #[no_mangle]
 pub extern "C" fn crc_fast_digest_new_with_params(
@@ -330,6 +341,18 @@ pub extern "C" fn crc_fast_digest_get_amount(handle: *mut CrcFastDigestHandle) -
     unsafe {
         let digest = &*(*handle).0;
         digest.get_amount()
+    }
+}
+
+/// Gets the current state of the Digest
+#[no_mangle]
+pub extern "C" fn crc_fast_digest_get_state(handle: *mut CrcFastDigestHandle) -> u64 {
+    if handle.is_null() {
+        return 0;
+    }
+    unsafe {
+        let digest = &*(*handle).0;
+        digest.get_state()
     }
 }
 

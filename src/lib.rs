@@ -376,6 +376,18 @@ impl DynDigest for Digest {
 
 impl Digest {
     /// Creates a new `Digest` instance for the specified CRC algorithm.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use crc_fast::{Digest, CrcAlgorithm::Crc32IsoHdlc};
+    ///
+    /// let mut digest = Digest::new(Crc32IsoHdlc);
+    /// digest.update(b"123456789");
+    /// let checksum = digest.finalize();
+    ///
+    /// assert_eq!(checksum, 0xcbf43926);
+    /// ```
     #[inline(always)]
     pub fn new(algorithm: CrcAlgorithm) -> Self {
         let (calculator, params) = get_calculator_params(algorithm);
@@ -387,6 +399,42 @@ impl Digest {
             calculator,
         }
     }
+
+    /// Creates a new `Digest` instance for the specified CRC algorithm with a custom initial state.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use crc_fast::{Digest, CrcAlgorithm::Crc32IsoHdlc};
+    ///
+    /// // CRC-32/ISO-HDLC with initial state of 0x00000000, instead of the default initial state
+    /// // of 0xffffffff,
+    /// let mut digest = Digest::new_with_init_state(Crc32IsoHdlc, 0x00000000);
+    /// digest.update(b"123456789");
+    /// let checksum = digest.finalize();
+    ///
+    /// // different initial state, so checksum will be different
+    /// assert_eq!(checksum, 0xd202d277);
+    ///
+    /// let mut digest = Digest::new_with_init_state(Crc32IsoHdlc, 0xffffffff);
+    /// digest.update(b"123456789");
+    /// let checksum = digest.finalize();
+    ///
+    /// // same initial state as the default, so checksum will be the same
+    /// assert_eq!(checksum, 0xcbf43926);
+    /// ```
+    #[inline(always)]
+    pub fn new_with_init_state(algorithm: CrcAlgorithm, init_state: u64) -> Self {
+        let (calculator, params) = get_calculator_params(algorithm);
+
+        Self {
+            state: init_state,
+            amount: 0,
+            params,
+            calculator,
+        }
+    }
+
 
     /// Creates a new `Digest` instance with custom CRC parameters.
     ///
@@ -473,6 +521,27 @@ impl Digest {
     #[inline(always)]
     pub fn get_amount(&self) -> u64 {
         self.amount
+    }
+
+    /// Gets the current CRC state.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use crc_fast::{Digest, CrcAlgorithm::Crc32IsoHdlc};
+    ///
+    /// let mut digest = Digest::new(Crc32IsoHdlc);
+    /// digest.update(b"123456789");
+    /// let state = digest.get_state();
+    ///
+    /// // non-finalized state, so it won't match the final checksum
+    /// assert_eq!(state, 0x340bc6d9);
+    ///
+    /// // finalized state will match the checksum
+    /// assert_eq!(digest.finalize(), 0xcbf43926);
+    /// ```
+    #[inline(always)]
+    pub fn get_state(&self) -> u64 {
+        self.state
     }
 }
 
