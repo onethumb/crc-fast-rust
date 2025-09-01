@@ -1,5 +1,9 @@
 # Changes for crc-fast-rust
 
+## [1.5.0](https://github.com/awesomized/crc-fast-rust/releases/tag/1.5.0) - 2025-09-01
+* [Improve state handling](https://github.com/awesomized/crc-fast-rust/pull/16)
+* [Add support for building a static library](https://github.com/awesomized/crc-fast-rust/pull/17)
+
 ## [1.4.1](https://github.com/awesomized/crc-fast-rust/releases/tag/1.4.1) - 2025-09-01
 * [change unconditional x86-64-v4 reliance to the former x86-64-v2 reliance](https://github.com/awesomized/crc-fast-rust/pull/15)
 
