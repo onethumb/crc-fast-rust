@@ -435,7 +435,6 @@ impl Digest {
         }
     }
 
-
     /// Creates a new `Digest` instance with custom CRC parameters.
     ///
     /// # Examples
