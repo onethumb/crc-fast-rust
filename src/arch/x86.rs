@@ -229,7 +229,7 @@ impl ArchOps for X86Ops {
 
     #[rustversion::since(1.89)]
     #[inline]
-    #[target_feature(enable = "avx512f,avx512vl")]
+    #[target_feature(enable = "sse4.1")]
     unsafe fn xor3_vectors(
         &self,
         a: Self::Vector,
