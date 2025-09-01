@@ -15,7 +15,7 @@ rust-version = "1.81"
 
 [lib]
 name = "crc_fast"
-crate-type = ["lib", "cdylib"]
+crate-type = ["lib", "cdylib", "staticlib"]
 bench = true
 
 [dependencies]
