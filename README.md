@@ -50,12 +50,10 @@ the local system. Specifying the `DESTDIR` environment variable will allow you t
 DESTDIR=/my/custom/path make install
 ```
 
-You'll need to adjust if you want to optimize with [feature flags](Cargo.toml).
-
 ## Usage
 
-Add `crc-fast = version = "1.3"` to your `Cargo.toml` dependencies, which will enable every available optimization for
-the `stable` toolchain. Adjust as necessary for your desired [acceleration targets](#acceleration-targets).
+Add `crc-fast = version = "1.5"` to your `Cargo.toml` dependencies, which will enable every available optimization for
+the `stable` toolchain.
 
 ### Digest
 
@@ -312,22 +310,7 @@ but all known public & private implementations agree on the correct value, which
 # Acceleration targets
 
 This library has baseline support for accelerating all known `CRC-32` and `CRC-64` variants on `aarch64`, `x86_64`, and
-`x86` internally in pure `Rust`. It's extremely fast (up to dozens of GiB/s) by default if no feature flags are
-used.
-
-### tl;dr: Just tell me how to turn it up to 11! 🤘
-
-For `aarch64` and older `x86_64` systems, the release build will use the best available acceleration:
-
-```
-cargo build --release
-```
-
-For modern `x86_64` systems, you can enable [experimental VPCLMULQDQ support](#experimental-vpclmulqdq-support-in-rust)
-for a ~2X performance boost.
-
-At [Awesome](https://awesome.co/), we use these 👆 at large scale in production at [Flickr](https://flickr.com/) and
-[SmugMug](https://www.smugmug.com/).
+`x86` internally in pure `Rust`. 
 
 ### Checking your platform capabilities
 
@@ -344,31 +327,13 @@ cargo run arch-check
 cargo build --release
 ```
 
-### Experimental VPCLMULQDQ support in Rust
-
-This library also supports [VPCLMULQDQ](https://en.wikichip.org/wiki/x86/vpclmulqdq) for accelerating all `CRC-32` and
-`CRC-64` variants on modern `x86_64`
-platforms which support it when using `nightly` builds and the `vpclmulqdq` feature flag.
-
-Typical performance boosts are ~2X, and they apply to CPUs beginning with Intel
-[Ice Lake](https://en.wikipedia.org/wiki/Ice_Lake_%28microprocessor%29) (Sep 2019) and
-AMD [Zen4](https://en.wikipedia.org/wiki/Zen_4) (Sep 2022).
-
-```
-rustup toolchain install nightly
-cargo +nightly build --release --features=vpclmulqdq
-```
-
-`AVX512` support with `VPCLMULQDQ` is stabilized on [1.89.0](https://releases.rs/docs/1.89.0/), so once that becomes
-stable in August 2025, this library will be updated to use it by default without needing the `nightly` toolchain.
-
 ## Performance
 
 Modern systems can exceed 100 GiB/s for calculating `CRC-32/ISCSI`, `CRC-32/ISO-HDLC`,
 `CRC-64/NVME`, and all other reflected variants. (Forward variants are slower, due to the extra shuffle-masking, but
 are still extremely fast in this library).
 
-This is a summary of the best [targets](#acceleration-targets) for the most important and popular CRC checksums.
+This is a summary of the performance for the most important and popular CRC checksums.
 
 ### CRC-32/ISCSI (reflected)
 
@@ -376,9 +341,9 @@ AKA `crc32c` in many, but not all, implementations.
 
 | Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
 |:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq*  |          ~49 |         ~111 |
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq   |          ~49 |         ~111 |
 | x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | sse-pclmulqdq       |          ~18 |          ~52 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq*  |          ~23 |          ~54 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~23 |          ~54 |
 | x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~11 |          ~20 |
 | aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~19 |          ~39 |
 | aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |          ~10 |          ~17 |
@@ -391,9 +356,9 @@ AKA `crc32` in many, but not all, implementations.
 
 | Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
 |:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-248xl       | avx512-vpclmulqdq*  |          ~24 |         ~110 |
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-248xl       | avx512-vpclmulqdq   |          ~24 |         ~110 |
 | x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-248xl       | sse-pclmulqdq       |          ~21 |          ~28 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq*  |          ~24 |          ~55 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~24 |          ~55 |
 | x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~12 |          ~14 |
 | aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~19 |          ~39 |
 | aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |          ~10 |          ~17 |
@@ -406,9 +371,9 @@ AKA `crc32` in many, but not all, implementations.
 
 | Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
 |:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq*  |          ~25 |         ~110 |
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq   |          ~25 |         ~110 |
 | x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | sse-pclmulqdq       |          ~21 |          ~28 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq*  |          ~25 |          ~55 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~25 |          ~55 |
 | x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~11 |          ~14 |
 | aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~20 |          ~37 |
 | aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |          ~10 |          ~16 |
@@ -419,9 +384,9 @@ AKA `crc32` in many, but not all, implementations.
 
 | Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
 |:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq*  |          ~23 |          ~56 |
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq   |          ~23 |          ~56 |
 | x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | sse-pclmulqdq       |          ~19 |          ~28 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq*  |          ~21 |          ~43 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~21 |          ~43 |
 | x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~11 |          ~13 |
 | aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~16 |          ~32 |
 | aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |           ~9 |          ~14 |
@@ -432,16 +397,15 @@ AKA `crc32` in many, but not all, implementations.
 
 | Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
 |:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq*  |          ~24 |          ~56 |
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq   |          ~24 |          ~56 |
 | x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | sse-pclmulqdq       |          ~19 |          ~28 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq*  |          ~21 |          ~43 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~21 |          ~43 |
 | x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~11 |          ~13 |
 | aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~18 |          ~31 |
 | aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |           ~9 |          ~14 |
 | aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-eor3-pclmulqdq |          ~40 |          ~59 |
 | aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-eor3-pclmulqdq |          ~46 |          ~61 |
 
-\* = [Experimental VPCLMULQDQ support in Rust](#experimental-vpclmulqdq-support-in-rust) is enabled.
 
 ## Other CRC widths
 
