@@ -24,7 +24,7 @@ So I wrote one. :)
 
 ## Other languages
 
-Supplies a [C/C++ compatible shared library](#cc-compatible-shared-library) for use with other non-`Rust` languages.
+Supplies a [C/C++ compatible library](#cc-compatible-library) for use with other non-`Rust` languages.
 
 ## Implementations
 
@@ -39,8 +39,7 @@ See [CHANGELOG](CHANGELOG.md).
 ## Build & Install
 
 `cargo build` will obviously build the library, including
-the [C-compatible shared library](#c-compatible-shared-library). There are fine-tuning [feature flags](Cargo.toml)
-available, should they be necessary for your deployment and [acceleration](#acceleration-targets) targets.
+the [C-compatible library](#cc-compatible-library).
 
 A _very_ basic [Makefile](Makefile) is supplied which supports `make install` to install the shared library and header
 file to
@@ -246,11 +245,12 @@ let checksum = checksum_file_with_params(custom_params, file_on_disk, None);
 assert_eq!(checksum.unwrap(), 0xcbf43926);
 ```
 
-## C/C++ compatible shared library
+## C/C++ compatible library
 
 `cargo build` will produce a shared library target (`.so` on Linux, `.dll` on Windows, `.dylib` on macOS, etc) and an
 auto-generated [libcrc_fast.h](libcrc_fast.h) header file for use in non-Rust projects, such as through
-[FFI](https://en.wikipedia.org/wiki/Foreign_function_interface).
+[FFI](https://en.wikipedia.org/wiki/Foreign_function_interface). It will also produce a static library target (`.a` on Linux and macOS, `.lib` on Windows, etc) for projects
+which prefer statically linking.
 
 There is a [crc-fast PHP extension](https://github.com/awesomized/crc-fast-php-ext) using it, for example.
 
