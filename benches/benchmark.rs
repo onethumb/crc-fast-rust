@@ -7,7 +7,7 @@ use rand::{rng, RngCore};
 use std::hint::black_box;
 use std::time::Duration;
 
-pub const SIZES: &[(&str, i32); 2] = &[
+pub const SIZES: &[(&str, i32); 1] = &[
     ("1 MiB", 1024 * 1024),
     //("512 KiB", 512 * 1024),
     //("256 KiB", 256 * 1024),
@@ -17,7 +17,7 @@ pub const SIZES: &[(&str, i32); 2] = &[
     //("8 KiB", 8 * 1024),
     //("4 KiB", 4 * 1024),
     //("2 KiB", 4 * 1024),
-    ("1 KiB", 1024),
+    //("1 KiB", 1024),
     //("768 bytes", 768),
     //("512 bytes", 512),
     //("256 bytes", 256),
@@ -31,12 +31,13 @@ pub const SIZES: &[(&str, i32); 2] = &[
 ];
 
 // these are the most important algorithms in popular use, with forward/reflected coverage
-pub const CRC32_ALGORITHMS: &[CrcAlgorithm; 3] = &[
+pub const CRC32_ALGORITHMS: &[CrcAlgorithm; 1] = &[
     // benchmark both CRC-32/ISCSI and CRC-32/ISO-HDLC since they're special flowers with lots of
     // different acceleration targets.
-    CrcAlgorithm::Crc32Iscsi,   // reflected
-    CrcAlgorithm::Crc32IsoHdlc, // reflected
-    CrcAlgorithm::Crc32Bzip2,   // forward
+    CrcAlgorithm::Crc32Autosar, // reflected
+                                //CrcAlgorithm::Crc32Iscsi,   // reflected, fusion
+                                //CrcAlgorithm::Crc32IsoHdlc, // reflected, fusion
+                                //CrcAlgorithm::Crc32Bzip2,   // forward
 ];
 
 // these are the most important algorithms in popular use, with forward/reflected coverage
@@ -88,10 +89,6 @@ fn bench_crc32(c: &mut Criterion) {
     for (size_name, size) in SIZES {
         let buf = create_aligned_data(&*random_data(*size));
 
-        let (part1, rest) = buf.split_at(buf.len() / 4);
-        let (part2, rest) = rest.split_at(rest.len() / 3);
-        let (part3, part4) = rest.split_at(rest.len() / 2);
-
         for algorithm in CRC32_ALGORITHMS {
             let algorithm_name = algorithm.to_string();
             let mut algorithm_name_parts = algorithm_name.split('/');
@@ -100,27 +97,12 @@ fn bench_crc32(c: &mut Criterion) {
 
             group.throughput(Throughput::Bytes(*size as u64));
             group.sample_size(1000);
-            group.measurement_time(Duration::from_secs(30));
+            group.measurement_time(Duration::from_secs(10));
 
             let bench_name = [alg_suffix.unwrap(), "(checksum)"].join(" ");
 
             group.bench_function(BenchmarkId::new(bench_name, size_name), |b| {
                 b.iter(|| black_box(checksum(*algorithm, &buf)))
-            });
-
-            let bench_name = [algorithm_name.clone(), "(4-part digest)".parse().unwrap()].join(" ");
-
-            group.bench_function(BenchmarkId::new(bench_name, size_name), |b| {
-                b.iter(|| {
-                    black_box({
-                        let mut digest = crc_fast::Digest::new(*algorithm);
-                        digest.update(&part1);
-                        digest.update(&part2);
-                        digest.update(&part3);
-                        digest.update(&part4);
-                        digest.finalize()
-                    })
-                })
             });
         }
     }
@@ -176,6 +158,6 @@ fn bench_crc64(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_crc32, bench_crc64);
+criterion_group!(benches, bench_crc32);
 
 criterion_main!(benches);
