@@ -26,7 +26,10 @@ use x86::X86Ops;
 #[cfg(target_arch = "x86_64")]
 use vpclmulqdq::Vpclmulqdq512Ops;
 
+use crate::arch::aarch64_sha3::AArch64Sha3Ops;
+
 mod aarch64;
+mod aarch64_sha3;
 mod software;
 mod vpclmulqdq;
 mod x86;
@@ -40,12 +43,25 @@ mod x86;
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "aes")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
-    let ops = AArch64Ops;
+    if is_aarch64_feature_detected!("sha3") {
+        let ops = AArch64Sha3Ops::new();
 
-    match params.width {
-        64 => algorithm::update::<AArch64Ops, Width64>(state, bytes, params, &ops),
-        32 => algorithm::update::<AArch64Ops, Width32>(state as u32, bytes, params, &ops) as u64,
-        _ => panic!("Unsupported CRC width: {}", params.width),
+        match params.width {
+            64 => algorithm::update::<AArch64Sha3Ops, Width64>(state, bytes, params, &ops),
+            32 => algorithm::update::<AArch64Sha3Ops, Width32>(state as u32, bytes, params, &ops)
+                as u64,
+            _ => panic!("Unsupported CRC width: {}", params.width),
+        }
+    } else {
+        let ops = AArch64Ops;
+
+        match params.width {
+            64 => algorithm::update::<AArch64Ops, Width64>(state, bytes, params, &ops),
+            32 => {
+                algorithm::update::<AArch64Ops, Width32>(state as u32, bytes, params, &ops) as u64
+            }
+            _ => panic!("Unsupported CRC width: {}", params.width),
+        }
     }
 }
 
