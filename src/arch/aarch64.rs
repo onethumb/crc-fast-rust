@@ -257,19 +257,6 @@ impl ArchOps for AArch64Ops {
     }
 
     #[inline]
-    #[cfg(target_feature = "sha3")]
-    #[target_feature(enable = "sha3")]
-    unsafe fn xor3_vectors(
-        &self,
-        a: Self::Vector,
-        b: Self::Vector,
-        c: Self::Vector,
-    ) -> Self::Vector {
-        veor3q_u8(a, b, c)
-    }
-
-    #[inline]
-    #[cfg(not(target_feature = "sha3"))]
     #[target_feature(enable = "neon")]
     unsafe fn xor3_vectors(
         &self,
@@ -277,7 +264,6 @@ impl ArchOps for AArch64Ops {
         b: Self::Vector,
         c: Self::Vector,
     ) -> Self::Vector {
-        // Fallback for when SHA3 is not available
         veorq_u8(veorq_u8(a, b), c)
     }
 }
