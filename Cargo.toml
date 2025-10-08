@@ -22,7 +22,6 @@ bench = true
 crc = "3"
 digest = {  version = "0.10", features = ["alloc"] }
 rand = "0.9"
-libc = "0.2"
 regex = "1.11"
 rustversion = "1.0"
 

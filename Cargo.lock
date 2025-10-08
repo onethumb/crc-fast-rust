@@ -208,7 +208,6 @@ dependencies = [
  "crc",
  "criterion",
  "digest",
- "libc",
  "rand",
  "regex",
  "rustversion",

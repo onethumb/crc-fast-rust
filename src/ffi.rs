@@ -515,7 +515,7 @@ pub extern "C" fn crc_fast_get_calculator_target(algorithm: CrcFastAlgorithm) ->
 
 /// Gets the version of this library
 #[no_mangle]
-pub extern "C" fn crc_fast_get_version() -> *const libc::c_char {
+pub extern "C" fn crc_fast_get_version() -> *const c_char {
     const VERSION: &CStr =
         match CStr::from_bytes_with_nul(concat!(env!("CARGO_PKG_VERSION"), "\0").as_bytes()) {
             Ok(version) => version,
