@@ -3,92 +3,163 @@
 //! This module provides the main entry point for the SIMD CRC calculation.
 //!
 //! It dispatches to the appropriate architecture-specific implementation
-//! based on the target architecture.
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::is_aarch64_feature_detected;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
-use crate::algorithm;
-
 use crate::CrcParams;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
-use crate::structs::{Width32, Width64};
+#[cfg(target_arch = "aarch64")]
+use crate::arch::aarch64::aes::Aarch64AesOps;
 
 #[cfg(target_arch = "aarch64")]
-use aarch64::AArch64Ops;
+use crate::arch::aarch64::aes_sha3::Aarch64AesSha3Ops;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-use x86::X86Ops;
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+use crate::{
+    algorithm,
+    structs::{Width32, Width64},
+};
 
-#[rustversion::since(1.89)]
-#[cfg(target_arch = "x86_64")]
-use vpclmulqdq::Vpclmulqdq512Ops;
-
-mod aarch64;
-mod software;
-mod vpclmulqdq;
-mod x86;
+pub mod aarch64;
+pub mod software;
+pub mod x86;
+pub mod x86_64;
 
 /// Main entry point that dispatches to the appropriate architecture
 ///
-///
 /// # Safety
 /// May use native CPU features
+#[inline(always)]
+#[cfg(target_arch = "aarch64")]
+pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
+    use crate::feature_detection::{get_arch_ops, ArchOpsInstance};
+
+    match get_arch_ops() {
+        ArchOpsInstance::Aarch64AesSha3(ops) => update_aarch64_aes_sha3(state, bytes, params, *ops),
+        ArchOpsInstance::Aarch64Aes(ops) => update_aarch64_aes(state, bytes, params, *ops),
+        ArchOpsInstance::SoftwareFallback => {
+            if !is_aarch64_feature_detected!("aes") || !is_aarch64_feature_detected!("neon") {
+                #[cfg(any(not(target_feature = "aes"), not(target_feature = "neon")))]
+                {
+                    // Use software implementation when no SIMD support is available
+                    return crate::arch::software::update(state, bytes, params);
+                }
+            }
+
+            // This should likely never happen, but just in case
+            panic!("aarch64 features missing (NEON and/or AES)");
+        }
+    }
+}
+
 #[inline]
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "aes")]
-pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
-    let ops = AArch64Ops;
-
+unsafe fn update_aarch64_aes(
+    state: u64,
+    bytes: &[u8],
+    params: CrcParams,
+    ops: Aarch64AesOps,
+) -> u64 {
     match params.width {
-        64 => algorithm::update::<AArch64Ops, Width64>(state, bytes, params, &ops),
-        32 => algorithm::update::<AArch64Ops, Width32>(state as u32, bytes, params, &ops) as u64,
+        64 => algorithm::update::<_, Width64>(state, bytes, params, &ops),
+        32 => algorithm::update::<_, Width32>(state as u32, bytes, params, &ops) as u64,
         _ => panic!("Unsupported CRC width: {}", params.width),
     }
 }
 
-#[rustversion::before(1.89)]
 #[inline]
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "aes,sha3")]
+unsafe fn update_aarch64_aes_sha3(
+    state: u64,
+    bytes: &[u8],
+    params: CrcParams,
+    ops: Aarch64AesSha3Ops,
+) -> u64 {
+    match params.width {
+        64 => algorithm::update::<_, Width64>(state, bytes, params, &ops),
+        32 => algorithm::update::<_, Width32>(state as u32, bytes, params, &ops) as u64,
+        _ => panic!("Unsupported CRC width: {}", params.width),
+    }
+}
+
+/// Main entry point for x86/x86_64 (Rust 1.89+ which supports AVX-512)
+///
+/// # Safety
+/// May use native CPU features
+#[rustversion::since(1.89)]
+#[inline(always)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-#[target_feature(enable = "ssse3,sse4.1,pclmulqdq")]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
-    update_x86_sse(state, bytes, params)
-}
+    use crate::feature_detection::{get_arch_ops, ArchOpsInstance};
 
-#[rustversion::since(1.89)]
-#[inline]
-#[cfg(target_arch = "x86")]
-#[target_feature(enable = "ssse3,sse4.1,pclmulqdq")]
-pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
-    update_x86_sse(state, bytes, params)
-}
-
-#[rustversion::since(1.89)]
-#[inline]
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "ssse3,sse4.1,pclmulqdq")]
-pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
-    use std::arch::is_x86_feature_detected;
-
-    if bytes.len() >= 256
-        && is_x86_feature_detected!("vpclmulqdq")
-        && is_x86_feature_detected!("avx512f")
-        && is_x86_feature_detected!("avx512vl")
-    {
-        let ops = Vpclmulqdq512Ops::new();
-
-        return match params.width {
-            64 => algorithm::update::<Vpclmulqdq512Ops, Width64>(state, bytes, params, &ops),
-            32 => algorithm::update::<Vpclmulqdq512Ops, Width32>(state as u32, bytes, params, &ops)
-                as u64,
+    match get_arch_ops() {
+        #[cfg(target_arch = "x86_64")]
+        ArchOpsInstance::X86_64Avx512Vpclmulqdq(ops) => match params.width {
+            64 => algorithm::update::<_, Width64>(state, bytes, params, ops),
+            32 => algorithm::update::<_, Width32>(state as u32, bytes, params, ops) as u64,
             _ => panic!("Unsupported CRC width: {}", params.width),
-        };
+        },
+        #[cfg(target_arch = "x86_64")]
+        ArchOpsInstance::X86_64Avx512Pclmulqdq(ops) => match params.width {
+            64 => algorithm::update::<_, Width64>(state, bytes, params, ops),
+            32 => algorithm::update::<_, Width32>(state as u32, bytes, params, ops) as u64,
+            _ => panic!("Unsupported CRC width: {}", params.width),
+        },
+        ArchOpsInstance::X86SsePclmulqdq(ops) => match params.width {
+            64 => algorithm::update::<_, Width64>(state, bytes, params, ops),
+            32 => algorithm::update::<_, Width32>(state as u32, bytes, params, ops) as u64,
+            _ => panic!("Unsupported CRC width: {}", params.width),
+        },
+        ArchOpsInstance::SoftwareFallback => {
+            #[cfg(target_arch = "x86")]
+            crate::arch::x86_software_update(state, bytes, params);
+
+            // This should never happen, but just in case
+            panic!("x86 features missing (SSE4.1 && PCLMULQDQ)");
+        }
+    }
+}
+
+/// Main entry point for x86/x86_64 (Rust < 1.89 with no AVX-512 support)
+///
+/// # Safety
+/// May use native CPU features
+#[rustversion::before(1.89)]
+#[inline(always)]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
+    use crate::feature_detection::{get_arch_ops, ArchOpsInstance};
+
+    match get_arch_ops() {
+        ArchOpsInstance::X86SsePclmulqdq(ops) => match params.width {
+            64 => algorithm::update::<_, Width64>(state, bytes, params, ops),
+            32 => algorithm::update::<_, Width32>(state as u32, bytes, params, ops) as u64,
+            _ => panic!("Unsupported CRC width: {}", params.width),
+        },
+        ArchOpsInstance::SoftwareFallback => x86_software_update(state, bytes, params),
+    }
+}
+
+#[inline(always)]
+#[allow(unused)]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+fn x86_software_update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
+    if !is_x86_feature_detected!("sse4.1") || !is_x86_feature_detected!("pclmulqdq") {
+        #[cfg(all(
+            target_arch = "x86",
+            any(not(target_feature = "sse4.1"), not(target_feature = "pclmulqdq"))
+        ))]
+        {
+            // Use software implementation when no SIMD support is available
+            crate::arch::software::update(state, bytes, params);
+        }
     }
 
-    // fallback to the standard x86 SSE implementation
-    update_x86_sse(state, bytes, params)
+    // This should never happen, but just in case
+    panic!("x86 features missing (SSE4.1 && PCLMULQDQ)");
 }
 
 #[inline]
@@ -98,72 +169,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
     not(target_arch = "aarch64")
 ))]
 pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
-    software::update(state, bytes, params)
-}
-
-#[inline]
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-#[target_feature(enable = "ssse3,sse4.1,pclmulqdq")]
-unsafe fn update_x86_sse(state: u64, bytes: &[u8], params: CrcParams) -> u64 {
-    let ops = X86Ops;
-
-    match params.width {
-        64 => algorithm::update::<X86Ops, Width64>(state, bytes, params, &ops),
-        32 => algorithm::update::<X86Ops, Width32>(state as u32, bytes, params, &ops) as u64,
-        _ => panic!("Unsupported CRC width: {}", params.width),
-    }
-}
-
-#[rustversion::before(1.89)]
-pub fn get_target() -> String {
-    #[cfg(target_arch = "aarch64")]
-    {
-        if is_aarch64_feature_detected!("sha3") {
-            return "aarch64-neon-eor3-pclmulqdq".to_string();
-        }
-
-        "aarch64-neon-pclmulqdq".to_string()
-    }
-
-    #[allow(unreachable_code)]
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    return "x86-sse-pclmulqdq".to_string();
-
-    #[cfg(not(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")))]
-    return "software-fallback-tables".to_string();
-}
-
-#[rustversion::since(1.89)]
-pub fn get_target() -> String {
-    #[cfg(target_arch = "aarch64")]
-    {
-        if is_aarch64_feature_detected!("sha3") {
-            return "aarch64-neon-eor3-pclmulqdq".to_string();
-        }
-
-        "aarch64-neon-pclmulqdq".to_string()
-    }
-
-    #[cfg(target_arch = "x86_64")]
-    {
-        if is_x86_feature_detected!("vpclmulqdq")
-            && is_x86_feature_detected!("avx512f")
-            && is_x86_feature_detected!("avx512vl")
-        {
-            return "x86_64-avx512-vpclmulqdq".to_string();
-        }
-
-        if is_x86_feature_detected!("avx2") {
-            return "x86_64-avx2-pclmulqdq".to_string();
-        }
-    }
-
-    #[allow(unreachable_code)]
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    return "x86-sse-pclmulqdq".to_string();
-
-    #[cfg(not(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")))]
-    return "software-fallback-tables".to_string();
+    crate::arch::software::update(state, bytes, params)
 }
 
 #[cfg(test)]

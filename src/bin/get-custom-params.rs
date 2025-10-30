@@ -1,3 +1,5 @@
+// Copyright 2025 Don MacAskill. Licensed under MIT or Apache-2.0.
+
 //! This is a simple program to get custom CRC parameters from the command line.
 
 use std::env;

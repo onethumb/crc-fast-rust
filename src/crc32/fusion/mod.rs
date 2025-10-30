@@ -11,24 +11,23 @@
 mod aarch64;
 mod x86;
 
+/// Only AArch64 has native CRC-32/ISO-HDLC instructions
 #[inline(always)]
-#[allow(unused)]
+#[cfg(target_arch = "aarch64")]
 pub(crate) fn crc32_iso_hdlc(state: u32, data: &[u8]) -> u32 {
-    #[cfg(target_arch = "aarch64")]
-    return aarch64::crc32_iso_hdlc(state, data);
-
-    #[cfg(not(target_arch = "aarch64"))]
-    panic!("CRC-32/ISO-HDLC with fusion is only supported on AArch64 architecture");
+    aarch64::crc32_iso_hdlc(state, data)
 }
 
+/// Both AArch64 and x86 have native CRC-32/ISCSI instructions
 #[inline(always)]
 pub(crate) fn crc32_iscsi(state: u32, data: &[u8]) -> u32 {
     #[cfg(target_arch = "aarch64")]
-    return aarch64::crc32_iscsi(state, data);
+    {
+        aarch64::crc32_iscsi(state, data)
+    }
 
-    #[cfg(target_arch = "x86_64")]
-    return x86::crc32_iscsi(state, data);
-
-    #[cfg(all(not(target_arch = "aarch64"), not(target_arch = "x86_64")))]
-    panic!("CRC-32/ISCSI with fusion is only supported on AArch64 and X86_64 architectures");
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        x86::crc32_iscsi(state, data)
+    }
 }

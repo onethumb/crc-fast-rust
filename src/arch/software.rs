@@ -1,66 +1,102 @@
 // Copyright 2025 Don MacAskill. Licensed under MIT or Apache-2.0.
 
 //! This module contains a software fallback for unsupported architectures.
+//!
+//! Software fallback is conditionally compiled based on target architecture:
+//! - Always included for non-SIMD architectures (not x86/x86_64/aarch64)
+//! - Included for x86 when SSE4.1/PCLMULQDQ may not be available
+//! - Included for aarch64 for runtime fallback when AES is not detected
+//! - Excluded for x86_64 since SSE4.1/PCLMULQDQ are always available (but included for testing)
 
-#![cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+#![cfg(any(
+    // Non-aarch64/x86/x86_64 architectures always need software fallback
+    not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")),
+    // x86 may not have SSE4.1/PCLMULQDQ support
+    all(target_arch = "x86", any(not(target_feature = "sse4.1"), not(target_feature = "pclmulqdq"))),
+    // aarch64 needs software fallback for runtime detection when AES is not available...
+    // NEON doesn't guarantee AES, so for rare outlier CPUs this might not work 100%...
+    all(target_arch = "aarch64", not(target_feature = "aes")),
+    // Include for testing on all architectures
+    test
+))]
 
 use crate::consts::CRC_64_NVME;
 use crate::CrcAlgorithm;
 use crate::CrcParams;
 use crc::{Algorithm, Table};
 
+#[allow(unused)]
 const RUST_CRC32_AIXM: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_AIXM);
 
+#[allow(unused)]
 const RUST_CRC32_AUTOSAR: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_AUTOSAR);
 
+#[allow(unused)]
 const RUST_CRC32_BASE91_D: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_BASE91_D);
 
+#[allow(unused)]
 const RUST_CRC32_BZIP2: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_BZIP2);
 
+#[allow(unused)]
 const RUST_CRC32_CD_ROM_EDC: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_CD_ROM_EDC);
 
+#[allow(unused)]
 const RUST_CRC32_CKSUM: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_CKSUM);
 
+#[allow(unused)]
 const RUST_CRC32_ISCSI: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_ISCSI);
 
+#[allow(unused)]
 const RUST_CRC32_ISO_HDLC: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_ISO_HDLC);
 
+#[allow(unused)]
 const RUST_CRC32_JAMCRC: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_JAMCRC);
 
+#[allow(unused)]
 const RUST_CRC32_MEF: crc::Crc<u32, Table<16>> = crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_MEF);
 
+#[allow(unused)]
 const RUST_CRC32_MPEG_2: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_MPEG_2);
 
+#[allow(unused)]
 const RUST_CRC32_XFER: crc::Crc<u32, Table<16>> =
     crc::Crc::<u32, Table<16>>::new(&crc::CRC_32_XFER);
 
+#[allow(unused)]
 const RUST_CRC64_ECMA_182: crc::Crc<u64, Table<16>> =
     crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_ECMA_182);
 
+#[allow(unused)]
 const RUST_CRC64_GO_ISO: crc::Crc<u64, Table<16>> =
     crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_GO_ISO);
 
+#[allow(unused)]
 const RUST_CRC64_MS: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_MS);
 
+#[allow(unused)]
 const RUST_CRC64_NVME: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(&CRC_64_NVME);
 
+#[allow(unused)]
 const RUST_CRC64_REDIS: crc::Crc<u64, Table<16>> =
     crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_REDIS);
 
+#[allow(unused)]
 const RUST_CRC64_WE: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_WE);
 
+#[allow(unused)]
 const RUST_CRC64_XZ: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_XZ);
 
+#[allow(unused)]
 // Dispatch function that handles the generic case
 pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
     match params.width {
@@ -80,7 +116,7 @@ pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
                 CrcAlgorithm::Crc32Xfer => RUST_CRC32_XFER,
                 CrcAlgorithm::Crc32Custom => {
                     let algorithm: Algorithm<u32> = Algorithm {
-                        width: params.width as u8,
+                        width: params.width,
                         poly: params.poly as u32,
                         init: params.init as u32,
                         refin: params.refin,
@@ -110,13 +146,13 @@ pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
                 CrcAlgorithm::Crc64Xz => RUST_CRC64_XZ,
                 CrcAlgorithm::Crc64Custom => {
                     let algorithm: Algorithm<u64> = Algorithm {
-                        width: params.width as u8,
-                        poly: params.poly as u64,
-                        init: params.init as u64,
+                        width: params.width,
+                        poly: params.poly,
+                        init: params.init,
                         refin: params.refin,
                         refout: params.refout,
-                        xorout: params.xorout as u64,
-                        check: params.check as u64,
+                        xorout: params.xorout,
+                        check: params.check,
                         residue: 0x0000000000000000, // unused in this context
                     };
 

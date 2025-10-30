@@ -53,12 +53,7 @@ fn extract_keys_array(params: CrcParams) -> [u64; 23] {
 }
 
 /// Main entry point that works for both CRC-32 and CRC-64
-#[inline]
-#[cfg_attr(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature(enable = "sse3,sse4.1,pclmulqdq")
-)]
-#[cfg_attr(target_arch = "aarch64", target_feature(enable = "aes"))]
+#[inline(always)]
 pub unsafe fn update<T: ArchOps, W: EnhancedCrcWidth>(
     state: W::Value,
     bytes: &[u8],

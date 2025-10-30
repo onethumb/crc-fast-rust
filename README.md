@@ -339,73 +339,62 @@ This is a summary of the performance for the most important and popular CRC chec
 
 AKA `crc32c` in many, but not all, implementations.
 
-| Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
-|:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq   |          ~49 |         ~111 |
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | sse-pclmulqdq       |          ~18 |          ~52 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~23 |          ~54 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~11 |          ~20 |
-| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~19 |          ~39 |
-| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |          ~10 |          ~17 |
-| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-eor3-pclmulqdq |          ~49 |          ~99 |
-| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-eor3-pclmulqdq |          ~56 |          ~94 |
+| Arch    | Brand | CPU             | System                    | Target            | 1KiB (GiB/s) | 1MiB (GiB/s) |
+|:--------|:------|:----------------|:--------------------------|:------------------|-------------:|-------------:|
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq |          ~52 |         ~111 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq |          ~24 |          ~54 |
+| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-pmull-eor3   |          ~21 |          ~53 |
+| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pmull        |          ~11 |          ~17 |
+| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-pmull-eor3   |          ~49 |          ~99 |
+| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-pmull-eor3   |          ~56 |          ~94 |
 
 ### CRC-32/ISO-HDLC (reflected)
 
 AKA `crc32` in many, but not all, implementations.
 
-| Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
-|:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-248xl       | avx512-vpclmulqdq   |          ~24 |         ~110 |
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-248xl       | sse-pclmulqdq       |          ~21 |          ~28 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~24 |          ~55 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~12 |          ~14 |
-| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~19 |          ~39 |
-| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |          ~10 |          ~17 |
-| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-eor3-pclmulqdq |          ~48 |          ~98 |
-| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-eor3-pclmulqdq |          ~56 |          ~94 |
+| Arch    | Brand | CPU             | System                    | Target            | 1KiB (GiB/s) | 1MiB (GiB/s) |
+|:--------|:------|:----------------|:--------------------------|:------------------|-------------:|-------------:|
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-248xl       | avx512-vpclmulqdq |          ~20 |          ~88 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq |          ~15 |          ~55 |
+| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-pmull-eor3   |          ~21 |          ~53 |
+| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pmull        |          ~11 |          ~17 |
+| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-pmull-eor3   |          ~48 |          ~98 |
+| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-pmull-eor3   |          ~56 |          ~94 |
 
 ### CRC-64/NVME (reflected)
 
 [AWS S3's recommended checksum option](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html)
 
-| Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
-|:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq   |          ~25 |         ~110 |
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | sse-pclmulqdq       |          ~21 |          ~28 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~25 |          ~55 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~11 |          ~14 |
-| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~20 |          ~37 |
-| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |          ~10 |          ~16 |
-| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-eor3-pclmulqdq |          ~50 |          ~72 |
-| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-eor3-pclmulqdq |          ~52 |          ~72 |
+| Arch    | Brand | CPU             | System                    | Target            | 1KiB (GiB/s) | 1MiB (GiB/s) |
+|:--------|:------|:----------------|:--------------------------|:------------------|-------------:|-------------:|
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq |          ~21 |         ~110 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq |          ~16 |          ~55 |
+| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-pmull-eor3   |          ~21 |          ~41 |
+| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pmull        |          ~11 |          ~16 |
+| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-pmull-eor3   |          ~50 |          ~72 |
+| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-pmull-eor3   |          ~52 |          ~72 |
 
 ### CRC-32/BZIP2 (forward)
 
-| Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
-|:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq   |          ~23 |          ~56 |
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | sse-pclmulqdq       |          ~19 |          ~28 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~21 |          ~43 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~11 |          ~13 |
-| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~16 |          ~32 |
-| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |           ~9 |          ~14 |
-| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-eor3-pclmulqdq |          ~41 |          ~59 |
-| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-eor3-pclmulqdq |          ~47 |          ~64 |
+| Arch    | Brand | CPU             | System                    | Target            | 1KiB (GiB/s) | 1MiB (GiB/s) |
+|:--------|:------|:----------------|:--------------------------|:------------------|-------------:|-------------:|
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq |          ~20 |          ~56 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq |          ~14 |          ~43 |
+| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-pmull-eor3   |          ~18 |          ~40 |
+| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pmull        |           ~9 |          ~14 |
+| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-pmull-eor3   |          ~41 |          ~59 |
+| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-pmull-eor3   |          ~47 |          ~64 |
 
 ### CRC-64/ECMA-182 (forward)
 
-| Arch    | Brand | CPU             | System                    | Target              | 1KiB (GiB/s) | 1MiB (GiB/s) |
-|:--------|:------|:----------------|:--------------------------|:--------------------|-------------:|-------------:|
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq   |          ~24 |          ~56 |
-| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | sse-pclmulqdq       |          ~19 |          ~28 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq   |          ~21 |          ~43 |
-| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | sse-pclmulqdq       |          ~11 |          ~13 |
-| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-eor3-pclmulqdq |          ~18 |          ~31 |
-| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pclmulqdq      |           ~9 |          ~14 |
-| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-eor3-pclmulqdq |          ~40 |          ~59 |
-| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-eor3-pclmulqdq |          ~46 |          ~61 |
-
+| Arch    | Brand | CPU             | System                    | Target            | 1KiB (GiB/s) | 1MiB (GiB/s) |
+|:--------|:------|:----------------|:--------------------------|:------------------|-------------:|-------------:|
+| x86_64  | Intel | Sapphire Rapids | EC2 c7i.metal-24xl        | avx512-vpclmulqdq |          ~21 |          ~56 |
+| x86_64  | AMD   | Genoa           | EC2 c7a.metal-48xl        | avx512-vpclmulqdq |          ~14 |          ~43 |
+| aarch64 | AWS   | Graviton4       | EC2 c8g.metal-48xl        | neon-pmull-eor3   |          ~19 |          ~40 |
+| aarch64 | AWS   | Graviton2       | EC2 c6g.metal             | neon-pmull        |           ~9 |          ~14 |
+| aarch64 | Apple | M3 Ultra        | Mac Studio (32 core)      | neon-pmull-eor3   |          ~40 |          ~59 |
+| aarch64 | Apple | M4 Max          | MacBook Pro 16" (16 core) | neon-pmull-eor3   |          ~46 |          ~61 |
 
 ## Other CRC widths
 
@@ -422,6 +411,7 @@ PRs welcome!
 
 ## References
 
+* [Catalogue of parametrised CRC algorithms](https://reveng.sourceforge.io/crc-catalogue/all.htm)
 * [crc32-fast](https://crates.io/crates/crc32fast) Original `CRC-32/ISO-HDLC` (`crc32`) implementation in `Rust`.
 * [crc64-fast](https://github.com/tikv/crc64fast) Original `CRC-64/XZ` implementation in `Rust`.
 * [crc64fast-nvme](https://github.com/awesomized/crc64fast-nvme) Original `CRC-64/NVME` implementation in `Rust`.

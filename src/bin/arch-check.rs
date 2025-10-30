@@ -1,3 +1,5 @@
+// Copyright 2025 Don MacAskill. Licensed under MIT or Apache-2.0.
+
 //! This is a simple program that checks if the target architecture supports certain features.
 
 #[cfg(target_arch = "aarch64")]

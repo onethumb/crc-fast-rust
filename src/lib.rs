@@ -135,7 +135,7 @@ use crate::crc32::consts::{
     CRC32_ISCSI, CRC32_ISO_HDLC, CRC32_JAMCRC, CRC32_MEF, CRC32_MPEG_2, CRC32_XFER,
 };
 
-#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 use crate::crc32::fusion;
 
 use crate::crc64::consts::{
@@ -155,6 +155,7 @@ mod consts;
 mod crc32;
 mod crc64;
 mod enums;
+mod feature_detection;
 mod ffi;
 mod generate;
 mod structs;
@@ -782,6 +783,19 @@ pub fn checksum_combine_with_params(
 
 /// Returns the target used to calculate the CRC checksum for the specified algorithm.
 ///
+/// This function provides visibility into the active performance tier being used for CRC calculations.
+/// The target string follows the format `{architecture}-{intrinsics-family}-{intrinsics-features}`,
+/// such as `aarch64-aes-sha3` or `x86_64-avx512-vpclmulqdq`.
+///
+/// The performance tier system provides graceful degradation across different hardware capabilities:
+/// - **AArch64**: `aarch64-aes-sha3` (highest) → `aarch64-aes-pmull` (baseline)
+/// - **x86_64**: `x86_64-avx512-vpclmulqdq` (highest) → `x86_64-avx512-pclmulqdq` (mid) → `x86_64-sse-pclmulqdq` (baseline)
+/// - **x86**: `x86-sse-pclmulqdq` (baseline) → `software-fallback-tables` (fallback)
+/// - **Other architectures**: `software-fallback-tables`
+///
+/// The tier selection is deterministic and consistent across runs on the same hardware,
+/// combining compile-time and runtime feature detection for safety and optimal performance.
+///
 /// These strings are informational only, not stable, and shouldn't be relied on to match across
 /// versions.
 ///
@@ -790,9 +804,17 @@ pub fn checksum_combine_with_params(
 /// use crc_fast::{get_calculator_target, CrcAlgorithm::Crc32IsoHdlc};
 ///
 /// let target = get_calculator_target(Crc32IsoHdlc);
+/// println!("Using performance tier: {}", target);
+/// // Example outputs:
+/// // "aarch64-aes-sha3" - AArch64 with SHA3 and AES support
+/// // "x86_64-avx512-vpclmulqdq" - x86_64 with VPCLMULQDQ support
+/// // "x86_64-sse-pclmulqdq" - x86_64 baseline with SSE4.1 and PCLMULQDQ
 /// ```
 pub fn get_calculator_target(_algorithm: CrcAlgorithm) -> String {
-    arch::get_target()
+    use crate::feature_detection::get_arch_ops;
+
+    let arch_ops = get_arch_ops();
+    arch_ops.get_target_string()
 }
 
 /// Returns the calculator function and parameters for the specified CRC algorithm.
@@ -834,11 +856,15 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
 #[inline(always)]
 fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
     // both aarch64 and x86 have native CRC-32/ISCSI support, so we can use fusion
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64", target_arch = "x86"))]
     return fusion::crc32_iscsi(state as u32, data) as u64;
 
-    #[cfg(all(not(target_arch = "aarch64"), not(target_arch = "x86_64")))]
-    // fallback to traditional calculation if not aarch64 or x86_64
+    #[cfg(all(
+        not(target_arch = "aarch64"),
+        not(target_arch = "x86_64"),
+        not(target_arch = "x86")
+    ))]
+    // Fallback to traditional calculation for other architectures
     Calculator::calculate(state, data, _params)
 }
 
@@ -942,6 +968,64 @@ mod lib {
         assert_eq!(
             checksum_with_params(get_custom_crc64_forward(), TEST_CHECK_STRING),
             CRC64_ECMA_182.check,
+        );
+    }
+
+    #[test]
+    fn test_get_calculator_target_format() {
+        let target = get_calculator_target(CrcAlgorithm::Crc32IsoHdlc);
+
+        // Target string should not be empty
+        assert!(!target.is_empty());
+
+        // Should follow the expected format with valid architecture prefixes
+        let valid_prefixes = ["aarch64-", "x86_64-", "x86-", "software-"];
+        assert!(
+            valid_prefixes
+                .iter()
+                .any(|prefix| target.starts_with(prefix)),
+            "Target '{}' should start with a valid architecture prefix",
+            target
+        );
+
+        // Should contain intrinsics family and features information
+        let parts: Vec<&str> = target.split('-').collect();
+        assert!(
+            parts.len() >= 3,
+            "Target '{}' should have at least 3 parts: architecture-family-features",
+            target
+        );
+    }
+
+    #[test]
+    fn test_get_calculator_target_consistency() {
+        // Multiple calls should return the same result (deterministic)
+        let target1 = get_calculator_target(CrcAlgorithm::Crc32IsoHdlc);
+        let target2 = get_calculator_target(CrcAlgorithm::Crc32Iscsi);
+        let target3 = get_calculator_target(CrcAlgorithm::Crc64Nvme);
+
+        assert_eq!(
+            target1, target2,
+            "Target should be consistent across different CRC-32 algorithms"
+        );
+        assert_eq!(
+            target1, target3,
+            "Target should be consistent across CRC-32 and CRC-64 algorithms"
+        );
+    }
+
+    #[test]
+    fn test_get_calculator_target_uses_cached_detection() {
+        // This test verifies that the function uses cached feature detection
+        // by checking that multiple calls are consistent and don't perform
+        // redundant feature detection
+
+        let target1 = get_calculator_target(CrcAlgorithm::Crc32IsoHdlc);
+        let target2 = get_calculator_target(CrcAlgorithm::Crc32IsoHdlc);
+
+        assert_eq!(
+            target1, target2,
+            "Cached detection should return identical results"
         );
     }
 

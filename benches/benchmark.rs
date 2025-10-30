@@ -31,11 +31,12 @@ pub const SIZES: &[(&str, i32); 2] = &[
 ];
 
 // these are the most important algorithms in popular use, with forward/reflected coverage
-pub const CRC32_ALGORITHMS: &[CrcAlgorithm; 3] = &[
+pub const CRC32_ALGORITHMS: &[CrcAlgorithm; 4] = &[
     // benchmark both CRC-32/ISCSI and CRC-32/ISO-HDLC since they're special flowers with lots of
     // different acceleration targets.
-    CrcAlgorithm::Crc32Iscsi,   // reflected
-    CrcAlgorithm::Crc32IsoHdlc, // reflected
+    CrcAlgorithm::Crc32Autosar, // reflected
+    CrcAlgorithm::Crc32Iscsi,   // reflected, fusion
+    CrcAlgorithm::Crc32IsoHdlc, // reflected, fusion
     CrcAlgorithm::Crc32Bzip2,   // forward
 ];
 

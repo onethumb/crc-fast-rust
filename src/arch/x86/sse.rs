@@ -4,7 +4,7 @@
 //!
 //! This module is designed to work with both x86 and x86_64 architectures.
 //!
-//! It uses the SSE2 and SSE4.1 instruction sets for SIMD operations.
+//! It uses the SSE4.1 instruction sets for SIMD operations.
 
 #![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 
@@ -16,10 +16,15 @@ use std::arch::x86_64::*;
 
 use crate::traits::ArchOps;
 
-#[derive(Debug, Copy, Clone)]
-pub struct X86Ops;
+// Tier-specific ArchOps implementations for x86/x86_64
 
-impl ArchOps for X86Ops {
+/// Base x86/x86_64 SSE+PCLMULQDQ implementation - baseline performance for both architectures
+/// Uses SSE4.1 and PCLMULQDQ instructions
+#[derive(Debug, Copy, Clone)]
+pub struct X86SsePclmulqdqOps;
+
+// Base implementation for x86/x86_64 SSE+PCLMULQDQ tier
+impl ArchOps for X86SsePclmulqdqOps {
     type Vector = __m128i;
 
     #[inline]
@@ -52,7 +57,6 @@ impl ArchOps for X86Ops {
     #[inline]
     #[target_feature(enable = "sse4.1")]
     unsafe fn create_vector_from_u64(&self, value: u64, high: bool) -> Self::Vector {
-        // x86 uses custom helper
         self.create_u64_vector(value, high)
     }
 
@@ -78,21 +82,18 @@ impl ArchOps for X86Ops {
     #[inline]
     #[target_feature(enable = "sse2")]
     unsafe fn load_bytes(&self, ptr: *const u8) -> Self::Vector {
-        // x86 requires cast to __m128i*
         _mm_loadu_si128(ptr as *const __m128i)
     }
 
     #[inline]
     #[target_feature(enable = "sse2")]
     unsafe fn load_aligned(&self, ptr: *const [u64; 2]) -> Self::Vector {
-        // x86 requires cast to __m128i*
         _mm_loadu_si128(ptr as *const __m128i)
     }
 
     #[inline]
     #[target_feature(enable = "ssse3")]
     unsafe fn shuffle_bytes(&self, data: Self::Vector, mask: Self::Vector) -> Self::Vector {
-        // x86 uses specific SSSE3 instruction
         _mm_shuffle_epi8(data, mask)
     }
 
@@ -104,14 +105,12 @@ impl ArchOps for X86Ops {
         b: Self::Vector,
         mask: Self::Vector,
     ) -> Self::Vector {
-        // x86 has native blend that uses MSB automatically
         _mm_blendv_epi8(a, b, mask)
     }
 
     #[inline]
     #[target_feature(enable = "sse2")]
     unsafe fn shift_left_8(&self, vector: Self::Vector) -> Self::Vector {
-        // x86 has a dedicated shift instruction
         _mm_slli_si128(vector, 8)
     }
 
@@ -227,7 +226,6 @@ impl ArchOps for X86Ops {
         _mm_clmulepi64_si128(a, b, 0x11)
     }
 
-    #[rustversion::since(1.89)]
     #[inline]
     #[target_feature(enable = "sse4.1")]
     unsafe fn xor3_vectors(
@@ -236,28 +234,12 @@ impl ArchOps for X86Ops {
         b: Self::Vector,
         c: Self::Vector,
     ) -> Self::Vector {
-        if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl") {
-            return self.xor3_vectors_avx512(a, b, c);
-        }
-
-        self.xor3_vectors_sse(a, b, c)
-    }
-
-    #[rustversion::before(1.89)]
-    #[inline]
-    #[target_feature(enable = "sse4.1")]
-    unsafe fn xor3_vectors(
-        &self,
-        a: Self::Vector,
-        b: Self::Vector,
-        c: Self::Vector,
-    ) -> Self::Vector {
-        self.xor3_vectors_sse(a, b, c)
+        // SSE tier always uses two XOR operations
+        _mm_xor_si128(_mm_xor_si128(a, b), c)
     }
 }
 
-impl X86Ops {
-    // Helper methods specific to x86/x86_64
+impl X86SsePclmulqdqOps {
     #[inline]
     #[target_feature(enable = "sse2")]
     unsafe fn set_epi64x(&self, e1: u64, e0: u64) -> __m128i {
@@ -317,21 +299,5 @@ impl X86Ops {
             let hi = _mm_cvtsi128_si32(_mm_srli_si128(v, 12)) as u32 as u64;
             lo | (hi << 32)
         }
-    }
-
-    #[rustversion::since(1.89)]
-    #[inline]
-    #[target_feature(enable = "avx512f,avx512vl")]
-    unsafe fn xor3_vectors_avx512(&self, a: __m128i, b: __m128i, c: __m128i) -> __m128i {
-        _mm_ternarylogic_epi64(
-            a, b, c, 0x96, // XOR3
-        )
-    }
-
-    #[inline]
-    #[target_feature(enable = "sse4.1")]
-    unsafe fn xor3_vectors_sse(&self, a: __m128i, b: __m128i, c: __m128i) -> __m128i {
-        // x86 doesn't have native XOR3 in SSE, use two XORs
-        _mm_xor_si128(_mm_xor_si128(a, b), c)
     }
 }
