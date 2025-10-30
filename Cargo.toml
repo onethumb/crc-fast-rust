@@ -1,6 +1,6 @@
 [package]
 name = "crc-fast"
-version = "1.5.0"
+version = "1.6.0"
 edition = "2021"
 authors = ["Don MacAskill"]
 license = "MIT OR Apache-2.0"
@@ -10,7 +10,10 @@ repository = "https://github.com/awesomized/crc-fast-rust"
 description = "World's fastest generic CRC32 and CRC64 calculator using SIMD. Supplies a C-compatible shared library for use in other languages."
 readme = "README.md"
 
-# 1.69.0 added VPCLMULQDQ x86 detection support, 1.70.0 added LLVM 16 which supports PMULL2 on Aarch64
+# important intrinsics stabilization notes:
+# 1.69.0 added VPCLMULQDQ x86 detection support
+# 1.70.0 added LLVM 16 which supports PMULL2 on Aarch64
+# 1.89.0 stabilized AVX-512 intrinsics, including VPCLMULQDQ
 rust-version = "1.81"
 
 [lib]
@@ -23,6 +26,8 @@ crc = "3"
 digest = {  version = "0.10", features = ["alloc"] }
 rand = "0.9"
 regex = "1.12"
+
+# will be removed once Rust 1.89 is the minimum supported version
 rustversion = "1.0"
 
 # constrain indexmap (transitive) to a version compatible with Rust 1.81.0

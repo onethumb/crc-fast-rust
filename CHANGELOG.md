@@ -1,5 +1,10 @@
 # Changes for crc-fast-rust
 
+## [1.6.0](https://github.com/awesomized/crc-fast-rust/releases/tag/1.6.0) - 2025-10-30
+* [Improve runtime feature detection (and performance)](https://github.com/awesomized/crc-fast-rust/pull/21)
+* [remove libc](https://github.com/awesomized/crc-fast-rust/pull/20)
+* [Enable generating and publishing binary packages](https://github.com/awesomized/crc-fast-rust/pull/22)
+
 ## [1.5.0](https://github.com/awesomized/crc-fast-rust/releases/tag/1.5.0) - 2025-09-01
 * [Improve state handling](https://github.com/awesomized/crc-fast-rust/pull/16)
 * [Add support for building a static library](https://github.com/awesomized/crc-fast-rust/pull/17)
