@@ -181,7 +181,7 @@ jobs:
           echo "${{ github.ref_name }}" > "$PKG_NAME/VERSION"
           
           echo "Creating README.txt..."
-          cat > "$PKG_NAME/README.txt" <<'EOF'
+          cat > "$PKG_NAME/README.txt" <<EOF
           crc-fast Binary Distribution
           Version: ${{ github.ref_name }}
           Platform: Linux ${{ matrix.arch }}
@@ -307,7 +307,7 @@ jobs:
           echo "${{ github.ref_name }}" > "$PKG_NAME/VERSION"
           
           echo "Creating README.txt..."
-          cat > "$PKG_NAME/README.txt" <<'EOF'
+          cat > "$PKG_NAME/README.txt" <<EOF
           crc-fast Binary Distribution
           Version: ${{ github.ref_name }}
           Platform: macOS ${{ matrix.arch }}

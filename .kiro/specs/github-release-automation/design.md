@@ -250,7 +250,7 @@ artifacts:
 matrix:
   include:
     - target: x86_64-unknown-linux-gnu
-      os: ubuntu-latest
+      os: ubuntu-22.04
       platform: linux
       arch: x86_64
       ext: tar.gz
@@ -268,7 +268,7 @@ matrix:
       ext: tar.gz
       
     - target: x86_64-pc-windows-msvc
-      os: windows-latest
+      os: windows-2022
       platform: windows
       arch: x86_64
       ext: zip
