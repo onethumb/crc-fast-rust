@@ -11,6 +11,9 @@
 /// ./generate -i avx512_vpclmulqdq -p crc32c -a v3x2
 ///
 /// Modified as necessary for this Rust implementation.
+///
+/// Uses AVX-512 VPCLMULQDQ instructions, so only available after Rust 1.89 (when AVX-512
+/// stabilized)
 #[rustversion::since(1.89)]
 #[inline]
 #[target_feature(enable = "avx512vl,vpclmulqdq")]

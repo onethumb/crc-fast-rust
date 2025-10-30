@@ -28,8 +28,7 @@ use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
-/// Safe wrapper for CRC32 iSCSI calculation using AVX-512
-/// CRC32 iSCSI calculation for Rust versions before 1.89
+/// CRC32 iSCSI calculation for Rust versions before 1.89 (pre-AVX-512 support)
 ///
 ///
 /// This function is called by the wrapper layer after feature detection has been performed.
@@ -42,7 +41,8 @@ pub fn crc32_iscsi(crc: u32, data: &[u8]) -> u32 {
     unsafe { crc32_iscsi_sse_v4s3x3(crc, data.as_ptr(), data.len()) }
 }
 
-/// CRC32 iSCSI calculation using the highest available instruction set
+/// CRC32 iSCSI calculation using the highest available instruction set after Rust 1.89
+/// (post-AVX-512 support)
 ///
 /// This function is called by the wrapper layer after feature detection has been performed.
 /// The wrapper layer ensures that only the appropriate implementation is called based on

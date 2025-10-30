@@ -100,7 +100,7 @@ unsafe fn detect_arch_capabilities() -> ArchCapabilities {
 unsafe fn detect_aarch64_features() -> ArchCapabilities {
     use std::arch::is_aarch64_feature_detected;
 
-    // AES is available on essentially all Aarch64 CPUs and provides the PMULL instructions
+    // AES is available on essentially all AArch64 CPUs and provides the PMULL instructions
     let has_aes = is_aarch64_feature_detected!("aes");
 
     // SHA3 is available on modern Aarch64 CPUs, and provides the EOR3 instruction for efficient
