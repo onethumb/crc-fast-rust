@@ -1,5 +1,5 @@
 // Copyright 2025 Don MacAskill. Licensed under MIT or Apache-2.0.
-
+// Future proofing for no_std support
 #![cfg_attr(not(feature = "std"), no_std)]
 
 //! `crc-fast`

@@ -153,6 +153,7 @@ impl BenchmarkResult {
 /// Fills a buffer with pseudo-random data using xorshift64* algorithm.
 /// This is a deterministic PRNG that's tiny, fast, and suitable for benchmark data generation.
 /// The seed is derived from the buffer size to provide some variability.
+/// This solves the problem of having to use a full-featured PRNG like rand for benchmark data generation.
 #[inline]
 fn fill_pseudo_random(buf: &mut [u8], seed: u64) {
     let mut x = seed;

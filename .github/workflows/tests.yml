@@ -25,17 +25,17 @@ jobs:
           components: rustfmt, clippy
           cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}
       - name: Check
-        run: cargo check
+        run: cargo check --all-features
       - name: Architecture check
-        run: cargo run --bin arch-check
+        run: cargo run --features cli --bin arch-check
       - if: ${{ matrix.rust-toolchain != 'nightly' }}
         name: Format
         run: cargo fmt -- --check
       - if: ${{ matrix.rust-toolchain != 'nightly' }}
         name: Clippy
-        run: cargo clippy
+        run: cargo clippy --all-features
       - name: Test
-        run: cargo test
+        run: cargo test --features cli
 
   test-x86_64:
     name: Test x86_64
@@ -56,17 +56,17 @@ jobs:
           components: rustfmt, clippy
           cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}
       - name: Check
-        run: cargo check
+        run: cargo check --all-features
       - name: Architecture check
-        run: cargo run --bin arch-check
+        run: cargo run --features cli --bin arch-check
       - if: ${{ matrix.rust-toolchain != 'nightly' }}
         name: Format
         run: cargo fmt -- --check
       - if: ${{ matrix.rust-toolchain != 'nightly' }}
         name: Clippy
-        run: cargo clippy
+        run: cargo clippy --all-features
       - name: Test
-        run: cargo test
+        run: cargo test --features cli
 
   test-x86:
     name:  Test x86
@@ -88,11 +88,11 @@ jobs:
       - name: Set up cross
         run: cargo install cross --locked --version 0.2.5
       - name: Check
-        run: cross check --target ${{ matrix.target }}
+        run: cross check --all-features --target ${{ matrix.target }}
       - name: Architecture check
-        run: cross run --bin arch-check --target ${{ matrix.target }}
+        run: cross run --features cli --bin arch-check --target ${{ matrix.target }}
       - name: Test
-        run: cross test --target ${{ matrix.target }}
+        run: cross test --features cli --target ${{ matrix.target }}
 
   test-software:
     name: Test software fallback
@@ -114,8 +114,8 @@ jobs:
       - name: Set up cross
         run: cargo install cross --locked --version 0.2.5
       - name: Check
-        run: cross check --target ${{ matrix.target }}
+        run: cross check --all-features --target ${{ matrix.target }}
       - name: Architecture check
-        run: cross run --bin arch-check --target ${{ matrix.target }}
+        run: cross run --features cli --bin arch-check --target ${{ matrix.target }}
       - name: Test
-        run: cross test --target ${{ matrix.target }}
+        run: cross test --features cli --target ${{ matrix.target }}
