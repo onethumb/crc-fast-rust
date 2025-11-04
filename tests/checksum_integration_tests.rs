@@ -8,7 +8,17 @@ use std::process::Command;
 #[test]
 fn test_benchmark_flag_parsing() {
     let output = Command::new("cargo")
-        .args(&["run", "--features", "cli", "--bin", "checksum", "--", "-a", "CRC-32/ISCSI", "-b"])
+        .args(&[
+            "run",
+            "--features",
+            "cli",
+            "--bin",
+            "checksum",
+            "--",
+            "-a",
+            "CRC-32/ISCSI",
+            "-b",
+        ])
         .output()
         .expect("Failed to execute command");
 
