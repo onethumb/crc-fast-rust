@@ -3,7 +3,6 @@
 //! This is a simple program to calculate a checksum from the command line
 
 use crc_fast::{checksum, checksum_file, CrcAlgorithm};
-use rand::RngCore;
 use std::env;
 use std::process::ExitCode;
 use std::str::FromStr;
@@ -151,6 +150,21 @@ impl BenchmarkResult {
     }
 }
 
+/// Fills a buffer with pseudo-random data using xorshift64* algorithm.
+/// This is a deterministic PRNG that's tiny, fast, and suitable for benchmark data generation.
+/// The seed is derived from the buffer size to provide some variability.
+#[inline]
+fn fill_pseudo_random(buf: &mut [u8], seed: u64) {
+    let mut x = seed;
+    for b in buf {
+        x ^= x >> 12;
+        x ^= x << 25;
+        x ^= x >> 27;
+        let r = x.wrapping_mul(0x2545_F491_4F6C_DD1D);
+        *b = r as u8;
+    }
+}
+
 fn generate_random_data(size: usize) -> Result<Vec<u8>, String> {
     // Check for reasonable size limits to prevent memory issues
     if size > 1_073_741_824 {
@@ -160,8 +174,11 @@ fn generate_random_data(size: usize) -> Result<Vec<u8>, String> {
 
     // Use vec! macro to avoid clippy warning about slow initialization
     let mut buf = vec![0u8; size];
-    let mut rng = rand::rng();
-    rng.fill_bytes(&mut buf);
+
+    // Derive seed from size for deterministic but varied data
+    let seed = 0x9E37_79B9_7F4A_7C15_u64.wrapping_add(size as u64);
+    fill_pseudo_random(&mut buf, seed);
+
     Ok(buf)
 }
 

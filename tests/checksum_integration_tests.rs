@@ -1,12 +1,14 @@
 // Copyright 2025 Don MacAskill. Licensed under MIT or Apache-2.0.
 
+#![cfg(feature = "cli")]
+
 use std::fs;
 use std::process::Command;
 
 #[test]
 fn test_benchmark_flag_parsing() {
     let output = Command::new("cargo")
-        .args(&["run", "--bin", "checksum", "--", "-a", "CRC-32/ISCSI", "-b"])
+        .args(&["run", "--features", "cli", "--bin", "checksum", "--", "-a", "CRC-32/ISCSI", "-b"])
         .output()
         .expect("Failed to execute command");
 
@@ -25,6 +27,8 @@ fn test_benchmark_with_size_parameter() {
     let output = Command::new("cargo")
         .args(&[
             "run",
+            "--features",
+            "cli",
             "--bin",
             "checksum",
             "--",
@@ -47,6 +51,8 @@ fn test_benchmark_with_duration_parameter() {
     let output = Command::new("cargo")
         .args(&[
             "run",
+            "--features",
+            "cli",
             "--bin",
             "checksum",
             "--",
@@ -69,6 +75,8 @@ fn test_benchmark_invalid_size() {
     let output = Command::new("cargo")
         .args(&[
             "run",
+            "--features",
+            "cli",
             "--bin",
             "checksum",
             "--",
@@ -91,6 +99,8 @@ fn test_benchmark_invalid_duration() {
     let output = Command::new("cargo")
         .args(&[
             "run",
+            "--features",
+            "cli",
             "--bin",
             "checksum",
             "--",
@@ -117,6 +127,8 @@ fn test_benchmark_with_file_input() {
     let output = Command::new("cargo")
         .args(&[
             "run",
+            "--features",
+            "cli",
             "--bin",
             "checksum",
             "--",
@@ -144,6 +156,8 @@ fn test_benchmark_with_string_input() {
     let output = Command::new("cargo")
         .args(&[
             "run",
+            "--features",
+            "cli",
             "--bin",
             "checksum",
             "--",
@@ -171,6 +185,8 @@ fn test_benchmark_different_algorithms() {
         let output = Command::new("cargo")
             .args(&[
                 "run",
+                "--features",
+                "cli",
                 "--bin",
                 "checksum",
                 "--",
@@ -198,6 +214,8 @@ fn test_benchmark_size_without_benchmark_flag() {
     let output = Command::new("cargo")
         .args(&[
             "run",
+            "--features",
+            "cli",
             "--bin",
             "checksum",
             "--",
@@ -219,6 +237,8 @@ fn test_benchmark_nonexistent_file() {
     let output = Command::new("cargo")
         .args(&[
             "run",
+            "--features",
+            "cli",
             "--bin",
             "checksum",
             "--",

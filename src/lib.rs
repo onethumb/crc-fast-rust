@@ -1,5 +1,7 @@
 // Copyright 2025 Don MacAskill. Licensed under MIT or Apache-2.0.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 //! `crc-fast`
 //! ===========
 //!
@@ -144,7 +146,10 @@ use crate::crc64::consts::{
 use crate::structs::Calculator;
 use crate::traits::CrcCalculator;
 use digest::{DynDigest, InvalidBufferSize};
+
+#[cfg(feature = "std")]
 use std::fs::File;
+#[cfg(feature = "std")]
 use std::io::{Read, Write};
 
 mod algorithm;
@@ -545,6 +550,7 @@ impl Digest {
     }
 }
 
+#[cfg(feature = "std")]
 impl Write for Digest {
     #[inline(always)]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
@@ -643,6 +649,7 @@ pub fn checksum_with_params(params: CrcParams, buf: &[u8]) -> u64 {
 ///
 /// assert_eq!(checksum.unwrap(), 0xcbf43926);
 /// ```
+#[cfg(feature = "std")]
 #[inline(always)]
 pub fn checksum_file(
     algorithm: CrcAlgorithm,
@@ -685,6 +692,7 @@ pub fn checksum_file(
 ///
 /// assert_eq!(checksum.unwrap(), 0xcbf43926);
 /// ```
+#[cfg(feature = "std")]
 pub fn checksum_file_with_params(
     params: CrcParams,
     path: &str,
@@ -698,6 +706,7 @@ pub fn checksum_file_with_params(
 /// # Errors
 ///
 /// This function will return an error if the file cannot be read.
+#[cfg(feature = "std")]
 fn checksum_file_with_digest(
     mut digest: Digest,
     path: &str,
