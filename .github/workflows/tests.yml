@@ -41,7 +41,7 @@ jobs:
     name: Test x86_64
     strategy:
       matrix:
-        os: [ ubuntu-latest, ubuntu-22.04, ubuntu-24.04, macos-13, macos-15-intel, windows-2022, windows-2025, windows-latest ]
+        os: [ ubuntu-latest, ubuntu-22.04, ubuntu-24.04, macos-15-intel, windows-2022, windows-2025, windows-latest ]
         rust-toolchain:
           - "1.81" # minimum for this crate
           - "1.89" # when AVX-512 VPCLMULQDQ was stabilized
