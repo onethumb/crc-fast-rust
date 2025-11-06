@@ -37,6 +37,9 @@ jobs:
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
+      - name: Run tests
+        run: cargo test
+
   build:
     name: Build ${{ matrix.platform }}-${{ matrix.arch }}
     needs: validate
