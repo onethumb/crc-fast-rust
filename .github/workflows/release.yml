@@ -630,7 +630,7 @@ jobs:
         uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # pinned commit for 2.4.1
         with:
           files: release-assets/*
-          draft: false
+          draft: true
           prerelease: false
           fail_on_unmatched_files: true
           generate_release_notes: true
