@@ -1,29 +1,65 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_run:
+    workflows: [Tests]
+    types:
+      - completed
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  check-trigger:
+    name: Check if triggered by tag
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      is_tag: ${{ steps.check.outputs.is_tag }}
+      tag_name: ${{ steps.check.outputs.tag_name }}
+    steps:
+      - name: Check if workflow was triggered by a version tag
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Workflow run event: ${{ github.event.workflow_run.event }}"
+          echo "Head branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Head SHA: ${{ github.event.workflow_run.head_sha }}"
+          
+          # Get tags for this commit
+          TAGS=$(gh api repos/${{ github.repository }}/git/refs/tags --jq '.[] | select(.object.sha == "${{ github.event.workflow_run.head_sha }}") | .ref' | sed 's|refs/tags/||')
+          
+          if [ -z "$TAGS" ]; then
+            echo "No tags found for this commit"
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+          else
+            # Check if any tag matches version pattern
+            VERSION_TAG=$(echo "$TAGS" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+            if [ -n "$VERSION_TAG" ]; then
+              echo "Found version tag: $VERSION_TAG"
+              echo "is_tag=true" >> $GITHUB_OUTPUT
+              echo "tag_name=$VERSION_TAG" >> $GITHUB_OUTPUT
+            else
+              echo "Tags found but none match version pattern"
+              echo "is_tag=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
   validate:
     name: Validate
+    needs: check-trigger
+    if: needs.check-trigger.outputs.is_tag == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      tag_name: ${{ needs.check-trigger.outputs.tag_name }}
     steps:
-      - name: Wait for Tests workflow to complete
-        uses: WyriHaximus/github-action-wait-for-status@c638eadb55e7c6d951b0eb5fff5733569d82b03e # pinned commit for 1.8.0
-        with:
-          ignoreActions: Release
-          checkInterval: 30
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Checkout code
         uses: actions/checkout@v4 # not pinning to commit hash since this is a GitHub action, which we trust
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # pinned commit for 1.15.2
@@ -37,10 +73,15 @@ jobs:
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
+      - name: Run tests
+        run: cargo test
+
   build:
     name: Build ${{ matrix.platform }}-${{ matrix.arch }}
     needs: validate
     runs-on: ${{ matrix.os }}
+    env:
+      TAG_NAME: ${{ needs.validate.outputs.tag_name }}
     strategy:
       fail-fast: false
       matrix:
@@ -153,7 +194,7 @@ jobs:
         if: matrix.platform == 'linux'
         shell: bash
         run: |
-          PKG_NAME="crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}"
+          PKG_NAME="crc-fast-$TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}"
           echo "Creating package directory structure for $PKG_NAME..."
           
           mkdir -p "$PKG_NAME/lib"
@@ -178,12 +219,12 @@ jobs:
           chmod +x "$PKG_NAME/bin/get-custom-params"
           
           echo "Creating VERSION file..."
-          echo "${{ github.ref_name }}" > "$PKG_NAME/VERSION"
+          echo "$TAG_NAME" > "$PKG_NAME/VERSION"
           
           echo "Creating README.txt..."
           cat > "$PKG_NAME/README.txt" <<EOF
           crc-fast Binary Distribution
-          Version: ${{ github.ref_name }}
+          Version: $TAG_NAME
           Platform: Linux ${{ matrix.arch }}
           
           CONTENTS
@@ -243,7 +284,7 @@ jobs:
         if: matrix.platform == 'linux'
         shell: bash
         run: |
-          PKG_NAME="crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}"
+          PKG_NAME="crc-fast-$TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}"
           ARCHIVE_NAME="${PKG_NAME}.tar.gz"
           
           echo "Creating compressed archive: $ARCHIVE_NAME"
@@ -261,7 +302,7 @@ jobs:
         if: matrix.platform == 'linux'
         shell: bash
         run: |
-          ARCHIVE_NAME="crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
+          ARCHIVE_NAME="crc-fast-$TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
           CHECKSUM_FILE="${ARCHIVE_NAME}.sha256"
           
           echo "Generating SHA256 checksum for $ARCHIVE_NAME..."
@@ -279,7 +320,7 @@ jobs:
         if: matrix.platform == 'macos'
         shell: bash
         run: |
-          PKG_NAME="crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}"
+          PKG_NAME="crc-fast-$TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}"
           echo "Creating package directory structure for $PKG_NAME..."
           
           mkdir -p "$PKG_NAME/lib"
@@ -304,12 +345,12 @@ jobs:
           chmod +x "$PKG_NAME/bin/get-custom-params"
           
           echo "Creating VERSION file..."
-          echo "${{ github.ref_name }}" > "$PKG_NAME/VERSION"
+          echo "$TAG_NAME" > "$PKG_NAME/VERSION"
           
           echo "Creating README.txt..."
           cat > "$PKG_NAME/README.txt" <<EOF
           crc-fast Binary Distribution
-          Version: ${{ github.ref_name }}
+          Version: $TAG_NAME
           Platform: macOS ${{ matrix.arch }}
           
           CONTENTS
@@ -368,7 +409,7 @@ jobs:
         if: matrix.platform == 'macos'
         shell: bash
         run: |
-          PKG_NAME="crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}"
+          PKG_NAME="crc-fast-$TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}"
           ARCHIVE_NAME="${PKG_NAME}.tar.gz"
           
           echo "Creating compressed archive: $ARCHIVE_NAME"
@@ -386,7 +427,7 @@ jobs:
         if: matrix.platform == 'macos'
         shell: bash
         run: |
-          ARCHIVE_NAME="crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
+          ARCHIVE_NAME="crc-fast-$TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
           CHECKSUM_FILE="${ARCHIVE_NAME}.sha256"
           
           echo "Generating SHA256 checksum for $ARCHIVE_NAME..."
@@ -404,7 +445,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          $PKG_NAME = "crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}"
+          $PKG_NAME = "crc-fast-$env:TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}"
           Write-Host "Creating package directory structure for $PKG_NAME..."
           
           New-Item -ItemType Directory -Path "$PKG_NAME/bin" -Force | Out-Null
@@ -425,12 +466,12 @@ jobs:
           Copy-Item "target/release/get-custom-params.exe" "$PKG_NAME/bin/"
           
           Write-Host "Creating VERSION file..."
-          "${{ github.ref_name }}" | Out-File -FilePath "$PKG_NAME/VERSION" -Encoding utf8 -NoNewline
+          "$env:TAG_NAME" | Out-File -FilePath "$PKG_NAME/VERSION" -Encoding utf8 -NoNewline
           
           Write-Host "Creating README.txt..."
           @"
           crc-fast Binary Distribution
-          Version: ${{ github.ref_name }}
+          Version: $env:TAG_NAME
           Platform: Windows ${{ matrix.arch }}
           
           CONTENTS
@@ -492,7 +533,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          $PKG_NAME = "crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}"
+          $PKG_NAME = "crc-fast-$env:TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}"
           $ARCHIVE_NAME = "${PKG_NAME}.zip"
           
           Write-Host "Creating compressed archive: $ARCHIVE_NAME"
@@ -513,7 +554,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          $ARCHIVE_NAME = "crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}.zip"
+          $ARCHIVE_NAME = "crc-fast-$env:TAG_NAME-${{ matrix.platform }}-${{ matrix.arch }}.zip"
           $CHECKSUM_FILE = "${ARCHIVE_NAME}.sha256"
           
           Write-Host "Generating SHA256 checksum for $ARCHIVE_NAME..."
@@ -534,23 +575,25 @@ jobs:
       - name: Upload package artifact
         uses: actions/upload-artifact@v4 # not pinning to commit hash since this is a GitHub action, which we trust
         with:
-          name: crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.ext }}
-          path: crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.ext }}
+          name: crc-fast-${{ needs.validate.outputs.tag_name }}-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.ext }}
+          path: crc-fast-${{ needs.validate.outputs.tag_name }}-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.ext }}
           if-no-files-found: error
           retention-days: 90
 
       - name: Upload checksum artifact
         uses: actions/upload-artifact@v4 # not pinning to commit hash since this is a GitHub action, which we trust
         with:
-          name: crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.ext }}.sha256
-          path: crc-fast-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.ext }}.sha256
+          name: crc-fast-${{ needs.validate.outputs.tag_name }}-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.ext }}.sha256
+          path: crc-fast-${{ needs.validate.outputs.tag_name }}-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.ext }}.sha256
           if-no-files-found: error
           retention-days: 90
 
   publish:
     name: Publish
-    needs: build
+    needs: [validate, build]
     runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ needs.validate.outputs.tag_name }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4 # not pinning to commit hash since this is a GitHub action, which we trust
@@ -564,11 +607,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Checking if release exists for tag: ${{ github.ref_name }}"
+          echo "Checking if release exists for tag: $TAG_NAME"
           
           RELEASE_DATA=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}")
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME")
           
           if echo "$RELEASE_DATA" | jq -e '.id' > /dev/null 2>&1; then
             RELEASE_ID=$(echo "$RELEASE_DATA" | jq -r '.id')
@@ -596,16 +639,16 @@ jobs:
           
           echo "Verifying all expected files are present..."
           EXPECTED_FILES=(
-            "crc-fast-${{ github.ref_name }}-linux-x86_64.tar.gz"
-            "crc-fast-${{ github.ref_name }}-linux-x86_64.tar.gz.sha256"
-            "crc-fast-${{ github.ref_name }}-linux-aarch64.tar.gz"
-            "crc-fast-${{ github.ref_name }}-linux-aarch64.tar.gz.sha256"
-            "crc-fast-${{ github.ref_name }}-macos-aarch64.tar.gz"
-            "crc-fast-${{ github.ref_name }}-macos-aarch64.tar.gz.sha256"
-            "crc-fast-${{ github.ref_name }}-windows-x86_64.zip"
-            "crc-fast-${{ github.ref_name }}-windows-x86_64.zip.sha256"
-            "crc-fast-${{ github.ref_name }}-windows-aarch64.zip"
-            "crc-fast-${{ github.ref_name }}-windows-aarch64.zip.sha256"
+            "crc-fast-$TAG_NAME-linux-x86_64.tar.gz"
+            "crc-fast-$TAG_NAME-linux-x86_64.tar.gz.sha256"
+            "crc-fast-$TAG_NAME-linux-aarch64.tar.gz"
+            "crc-fast-$TAG_NAME-linux-aarch64.tar.gz.sha256"
+            "crc-fast-$TAG_NAME-macos-aarch64.tar.gz"
+            "crc-fast-$TAG_NAME-macos-aarch64.tar.gz.sha256"
+            "crc-fast-$TAG_NAME-windows-x86_64.zip"
+            "crc-fast-$TAG_NAME-windows-x86_64.zip.sha256"
+            "crc-fast-$TAG_NAME-windows-aarch64.zip"
+            "crc-fast-$TAG_NAME-windows-aarch64.zip.sha256"
           )
           
           MISSING_FILES=()
@@ -630,7 +673,7 @@ jobs:
         uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # pinned commit for 2.4.1
         with:
           files: release-assets/*
-          draft: false
+          draft: true
           prerelease: false
           fail_on_unmatched_files: true
           generate_release_notes: true
