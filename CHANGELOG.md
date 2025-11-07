@@ -1,5 +1,9 @@
 # Changes for crc-fast-rust
 
+## [1.7.0](https://github.com/awesomized/crc-fast-rust/releases/tag/1.7.0) - 2025-11-07
+* [Fix/no std feature (currently wasm compatible; groundwork for no_std)](https://github.com/awesomized/crc-fast-rust/pull/25)
+* Support and publish [immutable releases](https://github.blog/changelog/2025-10-28-immutable-releases-are-now-generally-available/) on GitHub
+
 ## [1.6.0](https://github.com/awesomized/crc-fast-rust/releases/tag/1.6.0) - 2025-10-30
 * [Improve runtime feature detection (and performance)](https://github.com/awesomized/crc-fast-rust/pull/21)
 * [remove libc](https://github.com/awesomized/crc-fast-rust/pull/20)
