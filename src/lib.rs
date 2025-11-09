@@ -897,7 +897,7 @@ fn crc32_iso_hdlc_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64
     #[cfg(target_arch = "aarch64")]
     {
         use std::arch::is_aarch64_feature_detected;
-        if is_aarch64_feature_detected!("aes") && is_aarch64_feature_detected!("aes") {
+        if is_aarch64_feature_detected!("aes") && is_aarch64_feature_detected!("crc") {
             return fusion::crc32_iso_hdlc(state as u32, data) as u64;
         }
     }
