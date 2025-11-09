@@ -114,7 +114,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
         },
         ArchOpsInstance::SoftwareFallback => {
             #[cfg(target_arch = "x86")]
-            crate::arch::x86_software_update(state, bytes, params);
+            crate::arch::software::update(state, bytes, params);
 
             // This should never happen, but just in case
             panic!("x86 features missing (SSE4.1 && PCLMULQDQ)");
