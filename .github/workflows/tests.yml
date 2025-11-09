@@ -119,3 +119,31 @@ jobs:
         run: cross run --features cli --bin arch-check --target ${{ matrix.target }}
       - name: Test
         run: cross test --features cli --target ${{ matrix.target }}
+
+  miri-test-x86_64:
+    name: Miri Test x86_64
+    needs: test-x86_64
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9
+        with:
+          toolchain: nightly
+          components: miri
+      - name: Detect CPU cores
+        id: cores
+        run: |
+          CORES=$(nproc)
+          echo "count=$CORES" >> $GITHUB_OUTPUT
+          echo "use_nextest=$([[ $CORES -ge 2 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+      - name: Install nextest
+        if: steps.cores.outputs.use_nextest == 'true'
+        run: cargo install cargo-nextest --locked
+      - name: Setup Miri
+        run: cargo miri setup
+      - name: Run Miri tests (parallel)
+        if: steps.cores.outputs.use_nextest == 'true'
+        run: cargo miri nextest run --all-features -j${{ steps.cores.outputs.count }}
+      - name: Run Miri tests (serial)
+        if: steps.cores.outputs.use_nextest == 'false'
+        run: cargo miri test --all-features
