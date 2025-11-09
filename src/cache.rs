@@ -1029,14 +1029,27 @@ mod tests {
         );
     }
 
+    /// Non-stress version of the stress test to allow Miri to evaluate without timing out.
     #[test]
+    fn test_cache_memory_allocation_non_stress() {
+        cache_memory_allocation_stress(2);
+    }
+
+    /// Skipping for Miri runs due to time constraints, underlying code already covered by other
+    /// tests.
+    #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_cache_memory_allocation_stress() {
+        cache_memory_allocation_stress(1000);
+    }
+
+    fn cache_memory_allocation_stress(count: i32) {
         clear_cache();
 
         // Test cache behavior under memory allocation stress
         // Create a large number of unique cache entries to stress memory allocation
         let mut created_entries = Vec::new();
-        let stress_count = 1000;
+        let stress_count = count;
 
         // Create many unique cache entries
         for i in 0..stress_count {

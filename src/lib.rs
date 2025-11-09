@@ -864,16 +864,25 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
 /// fusion techniques to accelerate the calculation beyond what SIMD can do alone.
 #[inline(always)]
 fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
-    // both aarch64 and x86 have native CRC-32/ISCSI support, so we can use fusion
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64", target_arch = "x86"))]
-    return fusion::crc32_iscsi(state as u32, data) as u64;
+    #[cfg(target_arch = "aarch64")]
+    {
+        use std::arch::is_aarch64_feature_detected;
+        if is_aarch64_feature_detected!("aes") && is_aarch64_feature_detected!("crc") {
+            return fusion::crc32_iscsi(state as u32, data) as u64;
+        }
+    }
 
-    #[cfg(all(
-        not(target_arch = "aarch64"),
-        not(target_arch = "x86_64"),
-        not(target_arch = "x86")
-    ))]
-    // Fallback to traditional calculation for other architectures
+    // both aarch64 and x86 have native CRC-32/ISCSI support, so we can use fusion
+    #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+    {
+        use std::arch::is_x86_feature_detected;
+        if is_x86_feature_detected!("sse4.2") && is_x86_feature_detected!("pclmulqdq") {
+            return fusion::crc32_iscsi(state as u32, data) as u64;
+        }
+    }
+
+    // Fallback to traditional calculation for other architectures, which will eventually fall back
+    // to software tables if necessary
     Calculator::calculate(state, data, _params)
 }
 
@@ -886,11 +895,15 @@ fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
 fn crc32_iso_hdlc_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
     // aarch64 CPUs have native CRC-32/ISO-HDLC support, so we can use the fusion implementation
     #[cfg(target_arch = "aarch64")]
-    return fusion::crc32_iso_hdlc(state as u32, data) as u64;
+    {
+        use std::arch::is_aarch64_feature_detected;
+        if is_aarch64_feature_detected!("aes") && is_aarch64_feature_detected!("aes") {
+            return fusion::crc32_iso_hdlc(state as u32, data) as u64;
+        }
+    }
 
     // x86 CPUs don't have native CRC-32/ISO-HDLC support, so there's no fusion to be had, use
-    // traditional calculation
-    #[cfg(not(target_arch = "aarch64"))]
+    // traditional calculation, which will eventually fall back to software tables if necessary
     Calculator::calculate(state, data, _params)
 }
 
@@ -1082,6 +1095,16 @@ mod lib {
     }
 
     #[test]
+    fn test_1024_length() {
+        for config in TEST_ALL_CONFIGS {
+            test_length(1024, config);
+        }
+    }
+
+    /// Skipping for Miri runs due to time constraints, underlying code already covered by other
+    /// tests.
+    #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_small_all_lengths() {
         for config in TEST_ALL_CONFIGS {
             // Test each length from 1 to 255
@@ -1091,7 +1114,10 @@ mod lib {
         }
     }
 
+    /// Skipping for Miri runs due to time constraints, underlying code already covered by other
+    /// tests.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_medium_lengths() {
         for config in TEST_ALL_CONFIGS {
             // Test each length from 256 to 1024, which should fold and include handling remainders
@@ -1101,7 +1127,10 @@ mod lib {
         }
     }
 
+    /// Skipping for Miri runs due to time constraints, underlying code already covered by other
+    /// tests.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_large_lengths() {
         for config in TEST_ALL_CONFIGS {
             // Test 1 MiB just before, at, and just after the folding boundaries
@@ -1198,7 +1227,10 @@ mod lib {
         );
     }
 
+    /// Skipping for Miri runs due to isolation constraints, underlying code other than I/O already
+    /// covered by other tests.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_checksum_file() {
         // Create a test file with repeating zeros
         let test_file_path = "test/test_crc32_hash_file.bin";
@@ -1216,7 +1248,10 @@ mod lib {
         std::fs::remove_file(test_file_path).unwrap();
     }
 
+    /// Skipping for Miri runs due to isolation constraints, underlying code other than I/O already
+    /// covered by other tests.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_checksum_file_with_custom_params() {
         crate::cache::clear_cache();
 
@@ -1264,7 +1299,10 @@ mod lib {
         assert_eq!(result, check);
     }
 
+    /// Skipping for Miri runs due to isolation constraints, underlying code other than I/O already
+    /// covered by other tests.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_writer() {
         // Create a test file with repeating zeros
         let test_file_path = "test/test_crc32_writer_file.bin";
@@ -1359,6 +1397,7 @@ mod lib {
 
     /// Tests whether the FFI header is up-to-date
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_ffi_header() -> Result<(), String> {
         #[cfg(target_os = "windows")]
         {
