@@ -80,8 +80,13 @@ const RUST_CRC64_WE: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(
 #[allow(unused)]
 const RUST_CRC64_XZ: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_XZ);
 
-static CUSTOM_CRC32_CACHE: OnceLock<Mutex<HashMap<u32, &'static Algorithm<u32>>>> = OnceLock::new();
-static CUSTOM_CRC64_CACHE: OnceLock<Mutex<HashMap<u64, &'static Algorithm<u64>>>> = OnceLock::new();
+static CUSTOM_CRC32_CACHE: OnceLock<Mutex<HashMap<Crc32Key, &'static Algorithm<u32>>>> =
+    OnceLock::new();
+static CUSTOM_CRC64_CACHE: OnceLock<Mutex<HashMap<Crc64Key, &'static Algorithm<u64>>>> =
+    OnceLock::new();
+
+type Crc32Key = (u32, u32, bool, bool, u32, u32);
+type Crc64Key = (u64, u64, bool, bool, u64, u64);
 
 #[allow(unused)]
 // Dispatch function that handles the generic case
@@ -106,7 +111,14 @@ pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
                     let mut cache = cache.lock().unwrap();
 
                     // Create a key from params that uniquely identifies this algorithm
-                    let key = params.poly as u32;
+                    let key: Crc32Key = (
+                        params.poly as u32,
+                        params.init as u32,
+                        params.refin,
+                        params.refout,
+                        params.xorout as u32,
+                        params.check as u32,
+                    );
 
                     let static_algorithm = cache.entry(key).or_insert_with(|| {
                         let algorithm = Algorithm {
@@ -141,7 +153,14 @@ pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
                     let cache = CUSTOM_CRC64_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
                     let mut cache = cache.lock().unwrap();
 
-                    let key = params.poly;
+                    let key: Crc64Key = (
+                        params.poly,
+                        params.init,
+                        params.refin,
+                        params.refout,
+                        params.xorout,
+                        params.check,
+                    );
 
                     let static_algorithm = cache.entry(key).or_insert_with(|| {
                         let algorithm = Algorithm {
