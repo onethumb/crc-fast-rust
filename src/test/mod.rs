@@ -15,11 +15,8 @@ pub(crate) fn create_aligned_data(input: &[u8]) -> Vec<u8> {
     // Size of our target alignment structure
     let align_size = std::mem::size_of::<[[u64; 4]; 2]>(); // 64 bytes
 
-    // Create a vector with padding to ensure we can find a properly aligned position
-    let mut padded = Vec::with_capacity(input.len() + align_size);
-
-    // Fill with zeros initially to reach needed capacity
-    padded.resize(input.len() + align_size, 0);
+    // Create a zero-filled vector with padding to ensure we can find a properly aligned position
+    let mut padded = vec![0; input.len() + align_size];
 
     // Find the first address that satisfies our alignment
     let start_addr = padded.as_ptr() as usize;

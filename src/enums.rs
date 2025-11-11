@@ -2,8 +2,8 @@
 
 use crate::consts::*;
 use crate::CrcAlgorithm;
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use core::fmt::{Display, Formatter};
+use core::str::FromStr;
 
 impl FromStr for CrcAlgorithm {
     type Err = ();
@@ -35,7 +35,7 @@ impl FromStr for CrcAlgorithm {
 }
 
 impl Display for CrcAlgorithm {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             CrcAlgorithm::Crc32Aixm => write!(f, "{NAME_CRC32_AIXM}",),
             CrcAlgorithm::Crc32Autosar => write!(f, "{NAME_CRC32_AUTOSAR}",),

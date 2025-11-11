@@ -10,7 +10,7 @@ use crate::CrcParams;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 use crate::structs::CrcState;
 
-use std::ops::BitXor;
+use core::ops::BitXor;
 
 /// Marker trait for CRC width
 pub trait CrcWidth {

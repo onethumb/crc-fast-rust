@@ -59,11 +59,8 @@ fn create_aligned_data(input: &[u8]) -> Vec<u8> {
     // Size of our target alignment structure
     let align_size = std::mem::size_of::<[[u64; 4]; 2]>(); // 64 bytes
 
-    // Create a vector with padding to ensure we can find a properly aligned position
-    let mut padded = Vec::with_capacity(input.len() + align_size);
-
-    // Fill with zeros initially to reach needed capacity
-    padded.resize(input.len() + align_size, 0);
+    // Create a zero-filled vector with padding to ensure we can find a properly aligned position
+    let mut padded = vec![0; input.len() + align_size];
 
     // Find the first address that satisfies our alignment
     let start_addr = padded.as_ptr() as usize;
@@ -87,7 +84,7 @@ fn bench_crc32(c: &mut Criterion) {
     );
 
     for (size_name, size) in SIZES {
-        let buf = create_aligned_data(&*random_data(*size));
+        let buf = create_aligned_data(&random_data(*size));
 
         let (part1, rest) = buf.split_at(buf.len() / 4);
         let (part2, rest) = rest.split_at(rest.len() / 3);
@@ -115,10 +112,10 @@ fn bench_crc32(c: &mut Criterion) {
                 b.iter(|| {
                     black_box({
                         let mut digest = crc_fast::Digest::new(*algorithm);
-                        digest.update(&part1);
-                        digest.update(&part2);
-                        digest.update(&part3);
-                        digest.update(&part4);
+                        digest.update(part1);
+                        digest.update(part2);
+                        digest.update(part3);
+                        digest.update(part4);
                         digest.finalize()
                     })
                 })
@@ -137,7 +134,7 @@ fn bench_crc64(c: &mut Criterion) {
     let mut group = c.benchmark_group("CRC-64");
 
     for (size_name, size) in SIZES {
-        let buf = create_aligned_data(&*random_data(*size));
+        let buf = create_aligned_data(&random_data(*size));
 
         let (part1, rest) = buf.split_at(buf.len() / 4);
         let (part2, rest) = rest.split_at(rest.len() / 3);
@@ -165,10 +162,10 @@ fn bench_crc64(c: &mut Criterion) {
                 b.iter(|| {
                     black_box({
                         let mut digest = crc_fast::Digest::new(*algorithm);
-                        digest.update(&part1);
-                        digest.update(&part2);
-                        digest.update(&part3);
-                        digest.update(&part4);
+                        digest.update(part1);
+                        digest.update(part2);
+                        digest.update(part3);
+                        digest.update(part4);
                         digest.finalize()
                     })
                 })
