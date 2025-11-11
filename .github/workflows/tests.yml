@@ -23,7 +23,7 @@ jobs:
         with:
           toolchain: ${{ matrix.rust-toolchain }}
           components: rustfmt, clippy
-          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}
+          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}-v2
       - name: Check
         run: cargo check --all-features
       - name: Architecture check
@@ -54,7 +54,7 @@ jobs:
         with:
           toolchain: ${{ matrix.rust-toolchain }}
           components: rustfmt, clippy
-          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}
+          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}-v2
       - name: Check
         run: cargo check --all-features
       - name: Architecture check
@@ -168,7 +168,7 @@ jobs:
           toolchain: ${{ matrix.rust-toolchain }}
           target: ${{ matrix.target }}
           components: rustfmt, clippy
-          cache-key: ${{ matrix.target }}-${{ matrix.rust-toolchain }}
+          cache-key: ${{ matrix.target }}-${{ matrix.rust-toolchain }}-v2
       - name: Check no_std (no features)
         run: cargo check --target ${{ matrix.target }} --no-default-features --features panic-handler --lib
       - name: Check no_std with alloc
@@ -209,7 +209,7 @@ jobs:
           toolchain: ${{ matrix.rust-toolchain }}
           target: ${{ matrix.target }}
           components: rustfmt, clippy
-          cache-key: ${{ matrix.target }}-${{ matrix.rust-toolchain }}
+          cache-key: ${{ matrix.target }}-${{ matrix.rust-toolchain }}-v2
       - name: Check WASM (no features)
         run: cargo check --target ${{ matrix.target }} --no-default-features --features panic-handler --lib
       - name: Check WASM with alloc
