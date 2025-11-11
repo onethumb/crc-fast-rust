@@ -4,7 +4,7 @@
 //!
 //! It dispatches to the appropriate architecture-specific implementation
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", feature = "std"))]
 use std::arch::is_aarch64_feature_detected;
 
 use crate::CrcParams;
@@ -39,7 +39,13 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
         ArchOpsInstance::Aarch64AesSha3(ops) => update_aarch64_aes_sha3(state, bytes, params, *ops),
         ArchOpsInstance::Aarch64Aes(ops) => update_aarch64_aes(state, bytes, params, *ops),
         ArchOpsInstance::SoftwareFallback => {
-            if !is_aarch64_feature_detected!("aes") || !is_aarch64_feature_detected!("neon") {
+            #[cfg(feature = "std")]
+            let has_features =
+                is_aarch64_feature_detected!("aes") && is_aarch64_feature_detected!("neon");
+            #[cfg(not(feature = "std"))]
+            let has_features = cfg!(target_feature = "aes") && cfg!(target_feature = "neon");
+
+            if !has_features {
                 #[cfg(any(not(target_feature = "aes"), not(target_feature = "neon")))]
                 {
                     // Use software implementation when no SIMD support is available
@@ -183,7 +189,7 @@ mod tests {
             let actual = unsafe {
                 update(
                     config.get_init(),
-                    &*create_aligned_data(TEST_256_BYTES_STRING),
+                    &create_aligned_data(TEST_256_BYTES_STRING),
                     *config.get_params(),
                 ) ^ config.get_xorout()
             };
@@ -207,7 +213,7 @@ mod tests {
             let actual = unsafe {
                 update(
                     config.get_init(),
-                    &*create_aligned_data(test_string),
+                    &create_aligned_data(test_string),
                     *config.get_params(),
                 ) ^ config.get_xorout()
             };
@@ -231,7 +237,7 @@ mod tests {
             let actual = unsafe {
                 update(
                     config.get_init(),
-                    &*create_aligned_data(test_string),
+                    &create_aligned_data(test_string),
                     *config.get_params(),
                 ) ^ config.get_xorout()
             };

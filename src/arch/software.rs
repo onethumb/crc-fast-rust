@@ -5,9 +5,50 @@
 use crate::consts::CRC_64_NVME;
 use crate::CrcAlgorithm;
 use crate::CrcParams;
-use crc::{Algorithm, Table};
+#[cfg(feature = "alloc")]
+use crc::Algorithm;
+use crc::Table;
+
+// Caching for custom CRC algorithms to prevent repeated memory leaks
+#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 use std::collections::HashMap;
+#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 use std::sync::{Mutex, OnceLock};
+
+#[cfg(feature = "alloc")]
+#[cfg(all(not(feature = "std"), feature = "cache"))]
+use hashbrown::HashMap;
+#[cfg(feature = "alloc")]
+#[cfg(all(not(feature = "std"), feature = "cache"))]
+use spin::{Mutex, Once};
+
+// Cache key types for custom algorithms
+#[cfg(feature = "alloc")]
+#[cfg(any(feature = "std", feature = "cache"))]
+type Crc32Key = (u32, u32, bool, bool, u32, u32);
+#[cfg(feature = "alloc")]
+#[cfg(any(feature = "std", feature = "cache"))]
+type Crc64Key = (u64, u64, bool, bool, u64, u64);
+
+// Global caches for custom algorithms (std version)
+#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
+static CUSTOM_CRC32_CACHE: OnceLock<Mutex<HashMap<Crc32Key, &'static Algorithm<u32>>>> =
+    OnceLock::new();
+#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
+static CUSTOM_CRC64_CACHE: OnceLock<Mutex<HashMap<Crc64Key, &'static Algorithm<u64>>>> =
+    OnceLock::new();
+
+// Global caches for custom algorithms (no_std + cache version)
+#[cfg(feature = "alloc")]
+#[cfg(all(not(feature = "std"), feature = "cache"))]
+static CUSTOM_CRC32_CACHE: Once<Mutex<HashMap<Crc32Key, &'static Algorithm<u32>>>> = Once::new();
+#[cfg(feature = "alloc")]
+#[cfg(all(not(feature = "std"), feature = "cache"))]
+static CUSTOM_CRC64_CACHE: Once<Mutex<HashMap<Crc64Key, &'static Algorithm<u64>>>> = Once::new();
 
 #[allow(unused)]
 const RUST_CRC32_AIXM: crc::Crc<u32, Table<16>> =
@@ -80,14 +121,6 @@ const RUST_CRC64_WE: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(
 #[allow(unused)]
 const RUST_CRC64_XZ: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_XZ);
 
-static CUSTOM_CRC32_CACHE: OnceLock<Mutex<HashMap<Crc32Key, &'static Algorithm<u32>>>> =
-    OnceLock::new();
-static CUSTOM_CRC64_CACHE: OnceLock<Mutex<HashMap<Crc64Key, &'static Algorithm<u64>>>> =
-    OnceLock::new();
-
-type Crc32Key = (u32, u32, bool, bool, u32, u32);
-type Crc64Key = (u64, u64, bool, bool, u64, u64);
-
 #[allow(unused)]
 // Dispatch function that handles the generic case
 pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
@@ -107,34 +140,94 @@ pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
                 CrcAlgorithm::Crc32Mpeg2 => RUST_CRC32_MPEG_2,
                 CrcAlgorithm::Crc32Xfer => RUST_CRC32_XFER,
                 CrcAlgorithm::Crc32Custom => {
-                    let cache = CUSTOM_CRC32_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-                    let mut cache = cache.lock().unwrap();
+                    #[cfg(feature = "alloc")]
+                    {
+                        extern crate alloc;
+                        use alloc::boxed::Box;
 
-                    // Create a key from params that uniquely identifies this algorithm
-                    let key: Crc32Key = (
-                        params.poly as u32,
-                        params.init as u32,
-                        params.refin,
-                        params.refout,
-                        params.xorout as u32,
-                        params.check as u32,
-                    );
+                        // Use cache if std or cache feature is enabled
+                        #[cfg(any(feature = "std", feature = "cache"))]
+                        {
+                            let key: Crc32Key = (
+                                params.poly as u32,
+                                params.init as u32,
+                                params.refin,
+                                params.refout,
+                                params.xorout as u32,
+                                params.check as u32,
+                            );
 
-                    let static_algorithm = cache.entry(key).or_insert_with(|| {
-                        let algorithm = Algorithm {
-                            width: params.width,
-                            poly: params.poly as u32,
-                            init: params.init as u32,
-                            refin: params.refin,
-                            refout: params.refout,
-                            xorout: params.xorout as u32,
-                            check: params.check as u32,
-                            residue: 0x00000000,
-                        };
-                        Box::leak(Box::new(algorithm))
-                    });
+                            #[cfg(feature = "std")]
+                            {
+                                let cache =
+                                    CUSTOM_CRC32_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+                                let mut cache_guard = cache.lock().unwrap();
 
-                    crc::Crc::<u32, Table<16>>::new(static_algorithm)
+                                let static_algorithm =
+                                    cache_guard.entry(key).or_insert_with(|| {
+                                        let algorithm = Algorithm {
+                                            width: params.width,
+                                            poly: params.poly as u32,
+                                            init: params.init as u32,
+                                            refin: params.refin,
+                                            refout: params.refout,
+                                            xorout: params.xorout as u32,
+                                            check: params.check as u32,
+                                            residue: 0x00000000,
+                                        };
+                                        Box::leak(Box::new(algorithm))
+                                    });
+
+                                crc::Crc::<u32, Table<16>>::new(static_algorithm)
+                            }
+
+                            #[cfg(all(not(feature = "std"), feature = "cache"))]
+                            {
+                                let cache =
+                                    CUSTOM_CRC32_CACHE.call_once(|| Mutex::new(HashMap::new()));
+                                let mut cache_guard = cache.lock();
+
+                                let static_algorithm =
+                                    cache_guard.entry(key).or_insert_with(|| {
+                                        let algorithm = Algorithm {
+                                            width: params.width,
+                                            poly: params.poly as u32,
+                                            init: params.init as u32,
+                                            refin: params.refin,
+                                            refout: params.refout,
+                                            xorout: params.xorout as u32,
+                                            check: params.check as u32,
+                                            residue: 0x00000000,
+                                        };
+                                        Box::leak(Box::new(algorithm))
+                                    });
+
+                                crc::Crc::<u32, Table<16>>::new(static_algorithm)
+                            }
+                        }
+
+                        // Without cache, just leak (no_std without cache feature)
+                        #[cfg(not(any(feature = "std", feature = "cache")))]
+                        {
+                            let algorithm: Algorithm<u32> = Algorithm {
+                                width: params.width,
+                                poly: params.poly as u32,
+                                init: params.init as u32,
+                                refin: params.refin,
+                                refout: params.refout,
+                                xorout: params.xorout as u32,
+                                check: params.check as u32,
+                                residue: 0x00000000, // unused in this context
+                            };
+
+                            // ugly, but the crc crate is difficult to work with...
+                            let static_algorithm = Box::leak(Box::new(algorithm));
+
+                            crc::Crc::<u32, Table<16>>::new(static_algorithm)
+                        }
+                    }
+                    #[cfg(not(feature = "alloc"))]
+                    panic!("Custom CRC parameters require the 'alloc' feature")
                 }
                 _ => panic!("Invalid algorithm for u32 CRC"),
             };
@@ -150,33 +243,94 @@ pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
                 CrcAlgorithm::Crc64We => RUST_CRC64_WE,
                 CrcAlgorithm::Crc64Xz => RUST_CRC64_XZ,
                 CrcAlgorithm::Crc64Custom => {
-                    let cache = CUSTOM_CRC64_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-                    let mut cache = cache.lock().unwrap();
+                    #[cfg(feature = "alloc")]
+                    {
+                        extern crate alloc;
+                        use alloc::boxed::Box;
 
-                    let key: Crc64Key = (
-                        params.poly,
-                        params.init,
-                        params.refin,
-                        params.refout,
-                        params.xorout,
-                        params.check,
-                    );
+                        // Use cache if std or cache feature is enabled
+                        #[cfg(any(feature = "std", feature = "cache"))]
+                        {
+                            let key: Crc64Key = (
+                                params.poly,
+                                params.init,
+                                params.refin,
+                                params.refout,
+                                params.xorout,
+                                params.check,
+                            );
 
-                    let static_algorithm = cache.entry(key).or_insert_with(|| {
-                        let algorithm = Algorithm {
-                            width: params.width,
-                            poly: params.poly,
-                            init: params.init,
-                            refin: params.refin,
-                            refout: params.refout,
-                            xorout: params.xorout,
-                            check: params.check,
-                            residue: 0x0000000000000000,
-                        };
-                        Box::leak(Box::new(algorithm))
-                    });
+                            #[cfg(feature = "std")]
+                            {
+                                let cache =
+                                    CUSTOM_CRC64_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+                                let mut cache_guard = cache.lock().unwrap();
 
-                    crc::Crc::<u64, Table<16>>::new(static_algorithm)
+                                let static_algorithm =
+                                    cache_guard.entry(key).or_insert_with(|| {
+                                        let algorithm = Algorithm {
+                                            width: params.width,
+                                            poly: params.poly,
+                                            init: params.init,
+                                            refin: params.refin,
+                                            refout: params.refout,
+                                            xorout: params.xorout,
+                                            check: params.check,
+                                            residue: 0x0000000000000000,
+                                        };
+                                        Box::leak(Box::new(algorithm))
+                                    });
+
+                                crc::Crc::<u64, Table<16>>::new(static_algorithm)
+                            }
+
+                            #[cfg(all(not(feature = "std"), feature = "cache"))]
+                            {
+                                let cache =
+                                    CUSTOM_CRC64_CACHE.call_once(|| Mutex::new(HashMap::new()));
+                                let mut cache_guard = cache.lock();
+
+                                let static_algorithm =
+                                    cache_guard.entry(key).or_insert_with(|| {
+                                        let algorithm = Algorithm {
+                                            width: params.width,
+                                            poly: params.poly,
+                                            init: params.init,
+                                            refin: params.refin,
+                                            refout: params.refout,
+                                            xorout: params.xorout,
+                                            check: params.check,
+                                            residue: 0x0000000000000000,
+                                        };
+                                        Box::leak(Box::new(algorithm))
+                                    });
+
+                                crc::Crc::<u64, Table<16>>::new(static_algorithm)
+                            }
+                        }
+
+                        // Without cache, just leak (no_std without cache feature)
+                        #[cfg(not(any(feature = "std", feature = "cache")))]
+                        {
+                            let algorithm: Algorithm<u64> = Algorithm {
+                                width: params.width,
+                                poly: params.poly,
+                                init: params.init,
+                                refin: params.refin,
+                                refout: params.refout,
+                                xorout: params.xorout,
+                                check: params.check,
+                                residue: 0x0000000000000000, // unused in this context
+                            };
+
+                            // ugly, but the crc crate is difficult to work with...
+                            let static_algorithm = Box::leak(Box::new(algorithm));
+
+                            crc::Crc::<u64, Table<16>>::new(static_algorithm)
+                        }
+                    }
+                    #[cfg(not(feature = "alloc"))]
+                    panic!("Custom CRC parameters require the 'alloc' feature")
                 }
                 _ => panic!("Invalid algorithm for u64 CRC"),
             };
