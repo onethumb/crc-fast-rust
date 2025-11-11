@@ -11,11 +11,13 @@ use crate::CrcAlgorithm;
 use crate::CrcParams;
 use crate::{get_calculator_target, Digest};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
-use std::sync::Mutex;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
+
+static STRING_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
 // Global storage for stable key pointers to ensure they remain valid across FFI boundary
 static STABLE_KEY_STORAGE: OnceLock<Mutex<HashMap<u64, Box<[u64]>>>> = OnceLock::new();
@@ -55,10 +57,11 @@ fn create_stable_key_pointer(keys: &crate::CrcKeysStorage) -> (*const u64, u32) 
     };
 
     let boxed_keys = key_vec.into_boxed_slice();
-    let ptr = boxed_keys.as_ptr();
     let count = boxed_keys.len() as u32;
 
     storage_map.insert(key_hash, boxed_keys);
+
+    let ptr = storage_map.get(&key_hash).expect("just inserted").as_ptr();
 
     (ptr, count)
 }
@@ -473,8 +476,7 @@ pub extern "C" fn crc_fast_get_custom_params(
 
     // Get the custom params from the library
     let params = CrcParams::new(
-        // We need to use a static string for the name field
-        Box::leak(name.to_string().into_boxed_str()),
+        get_or_leak_string(name), // ✅ Use cached leak
         width,
         poly,
         init,
@@ -535,4 +537,19 @@ unsafe fn convert_to_string(data: *const u8, len: usize) -> String {
         Ok(s) => s.to_string(),
         Err(_) => panic!("Invalid UTF-8 string"),
     }
+}
+
+fn get_or_leak_string(s: &str) -> &'static str {
+    let cache = STRING_CACHE.get_or_init(|| Mutex::new(HashSet::new()));
+    let mut cache = cache.lock().unwrap();
+
+    // Check if we already have this string
+    if let Some(&cached) = cache.get(s) {
+        return cached;
+    }
+
+    // Leak it and cache the result
+    let leaked: &'static str = Box::leak(s.to_string().into_boxed_str());
+    cache.insert(leaked);
+    leaked
 }

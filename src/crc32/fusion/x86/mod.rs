@@ -180,32 +180,40 @@ mod tests {
 
     #[test]
     fn test_crc32_iscsi_check() {
-        assert_eq!(
-            crc32_iscsi(0xffffffff, TEST_CHECK_STRING) ^ 0xffffffff,
-            0xe3069283
-        );
+        if is_x86_feature_detected!("sse4.2") && is_x86_feature_detected!("pclmulqdq") {
+            assert_eq!(
+                crc32_iscsi(0xffffffff, TEST_CHECK_STRING) ^ 0xffffffff,
+                0xe3069283
+            );
+        }
     }
 
     #[test]
     fn test_crc32_iscsi_small_all_lengths() {
-        for len in 1..=255 {
-            test_crc32_iscsi_random(len);
+        if is_x86_feature_detected!("sse4.2") && is_x86_feature_detected!("pclmulqdq") {
+            for len in 1..=255 {
+                test_crc32_iscsi_random(len);
+            }
         }
     }
 
     #[test]
     fn test_crc32_iscsi_medium_lengths() {
-        // Test each length from 256 to 1024, which should fold and include handling remainders
-        for len in 256..=1024 {
-            test_crc32_iscsi_random(len);
+        if is_x86_feature_detected!("sse4.2") && is_x86_feature_detected!("pclmulqdq") {
+            // Test each length from 256 to 1024, which should fold and include handling remainders
+            for len in 256..=1024 {
+                test_crc32_iscsi_random(len);
+            }
         }
     }
 
     #[test]
     fn test_crc32_iscsi_large_lengths() {
-        // Test 1 MiB just before, at, and just after the folding boundaries
-        for len in 1048575..1048577 {
-            test_crc32_iscsi_random(len);
+        if is_x86_feature_detected!("sse4.2") && is_x86_feature_detected!("pclmulqdq") {
+            // Test 1 MiB just before, at, and just after the folding boundaries
+            for len in 1048575..1048577 {
+                test_crc32_iscsi_random(len);
+            }
         }
     }
 
@@ -215,7 +223,9 @@ mod tests {
 
         let checksum = RUST_CRC32_ISCSI.checksum(&data);
 
-        assert_eq!(crc32_iscsi(0xffffffff, &data) ^ 0xffffffff, checksum);
+        if is_x86_feature_detected!("sse4.2") && is_x86_feature_detected!("pclmulqdq") {
+            assert_eq!(crc32_iscsi(0xffffffff, &data) ^ 0xffffffff, checksum);
+        }
 
         unsafe {
             #[cfg(target_arch = "x86_64")]

@@ -112,13 +112,7 @@ pub(crate) unsafe fn update(state: u64, bytes: &[u8], params: CrcParams) -> u64 
             32 => algorithm::update::<_, Width32>(state as u32, bytes, params, ops) as u64,
             _ => panic!("Unsupported CRC width: {}", params.width),
         },
-        ArchOpsInstance::SoftwareFallback => {
-            #[cfg(target_arch = "x86")]
-            crate::arch::software::update(state, bytes, params);
-
-            // This should never happen, but just in case
-            panic!("x86 features missing (SSE4.1 && PCLMULQDQ)");
-        }
+        ArchOpsInstance::SoftwareFallback => crate::arch::software::update(state, bytes, params),
     }
 }
 
@@ -307,7 +301,10 @@ mod tests {
         }
     }
 
+    /// Skipping for Miri runs due to time constraints, underlying code already covered by other
+    /// tests.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_small_lengths_all() {
         // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {
@@ -318,7 +315,10 @@ mod tests {
         }
     }
 
+    /// Skipping for Miri runs due to time constraints, underlying code already covered by other
+    /// tests.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_medium_lengths() {
         // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {
@@ -329,7 +329,10 @@ mod tests {
         }
     }
 
+    /// Skipping for Miri runs due to time constraints, underlying code already covered by other
+    /// tests.
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_large_lengths() {
         // Test each CRC-64 variant
         for config in TEST_ALL_CONFIGS {

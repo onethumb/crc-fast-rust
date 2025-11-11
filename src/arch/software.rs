@@ -1,29 +1,13 @@
 // Copyright 2025 Don MacAskill. Licensed under MIT or Apache-2.0.
 
 //! This module contains a software fallback for unsupported architectures.
-//!
-//! Software fallback is conditionally compiled based on target architecture:
-//! - Always included for non-SIMD architectures (not x86/x86_64/aarch64)
-//! - Included for x86 when SSE4.1/PCLMULQDQ may not be available
-//! - Included for aarch64 for runtime fallback when AES is not detected
-//! - Excluded for x86_64 since SSE4.1/PCLMULQDQ are always available (but included for testing)
-
-#![cfg(any(
-    // Non-aarch64/x86/x86_64 architectures always need software fallback
-    not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")),
-    // x86 may not have SSE4.1/PCLMULQDQ support
-    all(target_arch = "x86", any(not(target_feature = "sse4.1"), not(target_feature = "pclmulqdq"))),
-    // aarch64 needs software fallback for runtime detection when AES is not available...
-    // NEON doesn't guarantee AES, so for rare outlier CPUs this might not work 100%...
-    all(target_arch = "aarch64", not(target_feature = "aes")),
-    // Include for testing on all architectures
-    test
-))]
 
 use crate::consts::CRC_64_NVME;
 use crate::CrcAlgorithm;
 use crate::CrcParams;
 use crc::{Algorithm, Table};
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 
 #[allow(unused)]
 const RUST_CRC32_AIXM: crc::Crc<u32, Table<16>> =
@@ -96,6 +80,14 @@ const RUST_CRC64_WE: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(
 #[allow(unused)]
 const RUST_CRC64_XZ: crc::Crc<u64, Table<16>> = crc::Crc::<u64, Table<16>>::new(&crc::CRC_64_XZ);
 
+static CUSTOM_CRC32_CACHE: OnceLock<Mutex<HashMap<Crc32Key, &'static Algorithm<u32>>>> =
+    OnceLock::new();
+static CUSTOM_CRC64_CACHE: OnceLock<Mutex<HashMap<Crc64Key, &'static Algorithm<u64>>>> =
+    OnceLock::new();
+
+type Crc32Key = (u32, u32, bool, bool, u32, u32);
+type Crc64Key = (u64, u64, bool, bool, u64, u64);
+
 #[allow(unused)]
 // Dispatch function that handles the generic case
 pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
@@ -115,19 +107,32 @@ pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
                 CrcAlgorithm::Crc32Mpeg2 => RUST_CRC32_MPEG_2,
                 CrcAlgorithm::Crc32Xfer => RUST_CRC32_XFER,
                 CrcAlgorithm::Crc32Custom => {
-                    let algorithm: Algorithm<u32> = Algorithm {
-                        width: params.width,
-                        poly: params.poly as u32,
-                        init: params.init as u32,
-                        refin: params.refin,
-                        refout: params.refout,
-                        xorout: params.xorout as u32,
-                        check: params.check as u32,
-                        residue: 0x00000000, // unused in this context
-                    };
+                    let cache = CUSTOM_CRC32_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+                    let mut cache = cache.lock().unwrap();
 
-                    // ugly, but the crc crate is difficult to work with...
-                    let static_algorithm = Box::leak(Box::new(algorithm));
+                    // Create a key from params that uniquely identifies this algorithm
+                    let key: Crc32Key = (
+                        params.poly as u32,
+                        params.init as u32,
+                        params.refin,
+                        params.refout,
+                        params.xorout as u32,
+                        params.check as u32,
+                    );
+
+                    let static_algorithm = cache.entry(key).or_insert_with(|| {
+                        let algorithm = Algorithm {
+                            width: params.width,
+                            poly: params.poly as u32,
+                            init: params.init as u32,
+                            refin: params.refin,
+                            refout: params.refout,
+                            xorout: params.xorout as u32,
+                            check: params.check as u32,
+                            residue: 0x00000000,
+                        };
+                        Box::leak(Box::new(algorithm))
+                    });
 
                     crc::Crc::<u32, Table<16>>::new(static_algorithm)
                 }
@@ -145,19 +150,31 @@ pub(crate) fn update(state: u64, data: &[u8], params: CrcParams) -> u64 {
                 CrcAlgorithm::Crc64We => RUST_CRC64_WE,
                 CrcAlgorithm::Crc64Xz => RUST_CRC64_XZ,
                 CrcAlgorithm::Crc64Custom => {
-                    let algorithm: Algorithm<u64> = Algorithm {
-                        width: params.width,
-                        poly: params.poly,
-                        init: params.init,
-                        refin: params.refin,
-                        refout: params.refout,
-                        xorout: params.xorout,
-                        check: params.check,
-                        residue: 0x0000000000000000, // unused in this context
-                    };
+                    let cache = CUSTOM_CRC64_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+                    let mut cache = cache.lock().unwrap();
 
-                    // ugly, but the crc crate is difficult to work with...
-                    let static_algorithm = Box::leak(Box::new(algorithm));
+                    let key: Crc64Key = (
+                        params.poly,
+                        params.init,
+                        params.refin,
+                        params.refout,
+                        params.xorout,
+                        params.check,
+                    );
+
+                    let static_algorithm = cache.entry(key).or_insert_with(|| {
+                        let algorithm = Algorithm {
+                            width: params.width,
+                            poly: params.poly,
+                            init: params.init,
+                            refin: params.refin,
+                            refout: params.refout,
+                            xorout: params.xorout,
+                            check: params.check,
+                            residue: 0x0000000000000000,
+                        };
+                        Box::leak(Box::new(algorithm))
+                    });
 
                     crc::Crc::<u64, Table<16>>::new(static_algorithm)
                 }
