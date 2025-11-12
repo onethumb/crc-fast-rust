@@ -482,6 +482,13 @@ where
 }
 
 /// Data region descriptor for overlapping SIMD reads in CRC processing
+///
+/// # Safety Invariants
+///
+/// When this struct is used with overlapping SIMD reads:
+/// - `offset` must be >= `CRC_CHUNK_SIZE` (16 bytes)
+/// - `remaining` must be in range 1..=15
+/// - `full_data` must contain at least `offset + remaining` bytes
 struct DataRegion<'a> {
     full_data: &'a [u8],
     offset: usize,

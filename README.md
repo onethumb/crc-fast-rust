@@ -49,6 +49,51 @@ the local system. Specifying the `DESTDIR` environment variable will allow you t
 DESTDIR=/my/custom/path make install
 ```
 
+## Features
+
+The library supports various feature flags for different environments:
+
+* `std` (default) - Standard library support, includes `alloc`
+* `alloc` - Heap allocation support (enables `Digest` trait, custom CRC params, checksum combining)
+* `cache` - Caches generated constants for custom CRC parameters (requires `alloc`)
+* `cli` - Enables command-line tools (`checksum`, `arch-check`, `get-custom-params`)
+* `ffi` - C/C++ FFI bindings for shared library
+* `panic-handler` - Provides panic handler for `no_std` environments (disable when building binaries)
+
+### Building for no_std
+
+For embedded targets without standard library:
+
+```bash
+# Minimal no_std (core CRC only, no heap)
+cargo build --target thumbv7em-none-eabihf --no-default-features --lib
+
+# With heap allocation (enables Digest, custom params)
+cargo build --target thumbv7em-none-eabihf --no-default-features --features alloc --lib
+
+# With caching (requires alloc)
+cargo build --target thumbv7em-none-eabihf --no-default-features --features cache --lib
+```
+
+Tested on ARM Cortex-M (`thumbv7em-none-eabihf`, `thumbv8m.main-none-eabihf`) and RISC-V (`riscv32imac-unknown-none-elf`).
+
+### Building for WASM
+
+For WebAssembly targets:
+
+```bash
+# Minimal WASM
+cargo build --target wasm32-unknown-unknown --no-default-features --lib
+
+# With heap allocation (typical use case)
+cargo build --target wasm32-unknown-unknown --no-default-features --features alloc --lib
+
+# Using wasm-pack for browser
+wasm-pack build --target web --no-default-features --features alloc
+```
+
+Tested on `wasm32-unknown-unknown`, `wasm32-wasip1`, and `wasm32-wasip2` targets.
+
 ## Usage
 
 Add `crc-fast = version = "1.5"` to your `Cargo.toml` dependencies, which will enable every available optimization for
