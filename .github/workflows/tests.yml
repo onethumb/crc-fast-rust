@@ -13,7 +13,6 @@ jobs:
         os: [ubuntu-22.04-arm, ubuntu-24.04-arm, macos-14, macos-15, macos-26, macos-latest, windows-11-arm]
         rust-toolchain:
           - "1.81" # minimum for this crate
-          - "1.89" # when AVX-512 VPCLMULQDQ was stabilized
           - "stable"
           - "nightly"
     runs-on: ${{ matrix.os }}
@@ -35,7 +34,7 @@ jobs:
         name: Clippy
         run: cargo clippy --all-features -- -D warnings
       - name: Test
-        run: cargo test --features cli
+        run: cargo test --all-features
 
   test-x86_64:
     name: Test x86_64
@@ -66,17 +65,16 @@ jobs:
         name: Clippy
         run: cargo clippy --all-features -- -D warnings
       - name: Test
-        run: cargo test --features cli
+        run: cargo test --all-features
 
-  test-x86:
-    name:  Test x86
+  test-x86-linux:
+    name:  Test x86 Linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
         target: [i586-unknown-linux-gnu, i686-unknown-linux-gnu]
         rust-toolchain:
           - "1.81" # minimum for this crate
-          - "1.89" # when AVX-512 VPCLMULQDQ was stabilized
           - "stable"
           - "nightly"
     steps:
@@ -92,7 +90,37 @@ jobs:
       - name: Architecture check
         run: cross run --features cli --bin arch-check --target ${{ matrix.target }}
       - name: Test
-        run: cross test --features cli --target ${{ matrix.target }}
+        run: cross test --all-features --target ${{ matrix.target }}
+
+  test-x86-windows:
+    name: Test x86 Windows
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        rust-toolchain:
+          - "1.81" # minimum for this crate
+          - "stable"
+          - "nightly"
+    steps:
+      - uses: actions/checkout@v4 # not pinning to commit hash since this is a GitHub action, which we trust
+      - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9 # v1.12.0
+        with:
+          toolchain: ${{ matrix.rust-toolchain }}
+          target: i686-pc-windows-msvc
+          components: rustfmt, clippy
+          cache-key: windows-x86-${{ matrix.rust-toolchain }}
+      - name: Check
+        run: cargo check --all-features --target i686-pc-windows-msvc
+      - name: Architecture check
+        run: cargo run --features cli --bin arch-check --target i686-pc-windows-msvc
+      - if: ${{ matrix.rust-toolchain != 'nightly' }}
+        name: Format
+        run: cargo fmt -- --check
+      - if: ${{ matrix.rust-toolchain != 'nightly' }}
+        name: Clippy
+        run: cargo clippy --all-features --target i686-pc-windows-msvc -- -D warnings
+      - name: Test
+        run: cargo test --all-features --target i686-pc-windows-msvc
 
   test-software:
     name: Test software fallback
@@ -102,7 +130,6 @@ jobs:
         target: [powerpc-unknown-linux-gnu, powerpc64-unknown-linux-gnu]
         rust-toolchain:
           - "1.81" # minimum for this crate
-          - "1.89" # when AVX-512 VPCLMULQDQ was stabilized
           - "stable"
           - "nightly"
     steps:
@@ -118,7 +145,7 @@ jobs:
       - name: Architecture check
         run: cross run --features cli --bin arch-check --target ${{ matrix.target }}
       - name: Test
-        run: cross test --features cli --target ${{ matrix.target }}
+        run: cross test --all-features --target ${{ matrix.target }}
 
   miri-test-x86_64:
     name: Miri Test x86_64
