@@ -23,7 +23,7 @@ jobs:
         with:
           toolchain: ${{ matrix.rust-toolchain }}
           components: rustfmt, clippy
-          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}
+          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}-v2
       - name: Check
         run: cargo check --all-features
       - name: Architecture check
@@ -54,7 +54,7 @@ jobs:
         with:
           toolchain: ${{ matrix.rust-toolchain }}
           components: rustfmt, clippy
-          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}
+          cache-key: ${{ matrix.os }}-${{ matrix.rust-toolchain }}-v2
       - name: Check
         run: cargo check --all-features
       - name: Architecture check
@@ -147,3 +147,82 @@ jobs:
       - name: Run Miri tests (serial)
         if: steps.cores.outputs.use_nextest == 'false'
         run: cargo miri test --all-features
+
+  test-no-std:
+    name: Test no_std
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - thumbv7em-none-eabihf  # ARM Cortex-M4F/M7F
+          - thumbv8m.main-none-eabihf  # ARM Cortex-M33/M35P
+          - riscv32imac-unknown-none-elf  # RISC-V 32-bit
+        rust-toolchain:
+          - "1.81" # minimum for this crate
+          - "stable"
+          - "nightly"
+    steps:
+      - uses: actions/checkout@v4 # not pinning to commit hash since this is a GitHub action, which we trust
+      - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9 # v1.12.0
+        with:
+          toolchain: ${{ matrix.rust-toolchain }}
+          target: ${{ matrix.target }}
+          components: rustfmt, clippy
+          cache-key: ${{ matrix.target }}-${{ matrix.rust-toolchain }}-v2
+      - name: Check no_std (no features)
+        run: cargo check --target ${{ matrix.target }} --no-default-features --features panic-handler --lib
+      - name: Check no_std with alloc
+        run: cargo check --target ${{ matrix.target }} --no-default-features --features alloc,panic-handler --lib
+      - name: Check no_std with cache
+        run: cargo check --target ${{ matrix.target }} --no-default-features --features cache,panic-handler --lib
+      - name: Run no_std tests (on host with std test harness)
+        run: cargo test --test no_std_tests
+
+  test-wasm:
+    name: Test WASM
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # WASM 1.0/2.0 (32-bit) - all toolchains
+          - target: wasm32-unknown-unknown
+            rust-toolchain: "1.81"
+          - target: wasm32-unknown-unknown
+            rust-toolchain: "stable"
+          - target: wasm32-unknown-unknown
+            rust-toolchain: "nightly"
+          # WASI preview 1 (32-bit) - all toolchains
+          - target: wasm32-wasip1
+            rust-toolchain: "1.81"
+          - target: wasm32-wasip1
+            rust-toolchain: "stable"
+          - target: wasm32-wasip1
+            rust-toolchain: "nightly"
+          # WASI preview 2 (32-bit) - nightly only (experimental)
+          - target: wasm32-wasip2
+            rust-toolchain: "nightly"
+          # Note: wasm64-unknown-unknown removed - not consistently available in nightly
+    steps:
+      - uses: actions/checkout@v4 # not pinning to commit hash since this is a GitHub action, which we trust
+      - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9 # v1.12.0
+        with:
+          toolchain: ${{ matrix.rust-toolchain }}
+          target: ${{ matrix.target }}
+          components: rustfmt, clippy
+          cache-key: ${{ matrix.target }}-${{ matrix.rust-toolchain }}-v2
+      - name: Check WASM (no features)
+        run: cargo check --target ${{ matrix.target }} --no-default-features --features panic-handler --lib
+      - name: Check WASM with alloc
+        run: cargo check --target ${{ matrix.target }} --no-default-features --features alloc,panic-handler --lib
+      - name: Check WASM with cache
+        run: cargo check --target ${{ matrix.target }} --no-default-features --features cache,panic-handler --lib
+      - name: Build WASM release
+        run: cargo build --target ${{ matrix.target }} --no-default-features --features alloc,panic-handler --lib --release
+      - name: Run WASM tests (on host with std test harness)
+        run: cargo test --test wasm_tests
+      - if: ${{ matrix.target == 'wasm32-unknown-unknown' && matrix.rust-toolchain == 'stable' }}
+        name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - if: ${{ matrix.target == 'wasm32-unknown-unknown' && matrix.rust-toolchain == 'stable' }}
+        name: Build WASM package with wasm-pack
+        run: wasm-pack build --target web --no-default-features --features alloc,panic-handler

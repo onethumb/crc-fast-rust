@@ -15,7 +15,8 @@
 mod iscsi;
 mod iso_hdlc;
 
-use std::arch::aarch64::*;
+use core::arch::aarch64::*;
+#[cfg(feature = "std")]
 use std::arch::is_aarch64_feature_detected;
 
 use iscsi::crc_pmull::crc32_iscsi_v12e_v1;
@@ -25,7 +26,12 @@ use iso_hdlc::crc_pmull_sha3::crc32_iso_hdlc_eor3_v9s3x2e_s3;
 
 #[inline(always)]
 pub fn crc32_iscsi(crc: u32, data: &[u8]) -> u32 {
-    if is_aarch64_feature_detected!("sha3") {
+    #[cfg(feature = "std")]
+    let has_sha3 = is_aarch64_feature_detected!("sha3");
+    #[cfg(not(feature = "std"))]
+    let has_sha3 = cfg!(target_feature = "sha3");
+
+    if has_sha3 {
         unsafe { crc32_iscsi_aes_sha3(crc, data) }
     } else {
         unsafe { crc32_iscsi_aes(crc, data) }
@@ -34,7 +40,12 @@ pub fn crc32_iscsi(crc: u32, data: &[u8]) -> u32 {
 
 #[inline(always)]
 pub fn crc32_iso_hdlc(crc: u32, data: &[u8]) -> u32 {
-    if is_aarch64_feature_detected!("sha3") {
+    #[cfg(feature = "std")]
+    let has_sha3 = is_aarch64_feature_detected!("sha3");
+    #[cfg(not(feature = "std"))]
+    let has_sha3 = cfg!(target_feature = "sha3");
+
+    if has_sha3 {
         unsafe { crc32_iso_hdlc_aes_sha3(crc, data) }
     } else {
         unsafe { crc32_iso_hdlc_aes(crc, data) }

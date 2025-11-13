@@ -7,7 +7,7 @@
 #![cfg(target_arch = "x86_64")]
 
 #[rustversion::since(1.89)]
-use std::arch::x86_64::*;
+use core::arch::x86_64::*;
 
 #[rustversion::since(1.89)]
 use crate::arch::x86::sse::X86SsePclmulqdqOps;

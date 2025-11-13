@@ -109,7 +109,7 @@
 
 #![allow(dead_code)]
 
-use std::ops::{BitAnd, BitOr, Shl, Shr};
+use core::ops::{BitAnd, BitOr, Shl, Shr};
 
 /// Exponents (bit distances) for CRC-32 key generation.
 ///
@@ -561,7 +561,7 @@ where
     let mut result = T::default(); // Zero value
 
     // Get the bit size of type T
-    let bit_size = std::mem::size_of::<T>() * 8;
+    let bit_size = core::mem::size_of::<T>() * 8;
 
     for _ in 0..bit_size {
         // Shift result left by 1

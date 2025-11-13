@@ -17,16 +17,16 @@ mod iscsi;
 
 use iscsi::sse_pclmulqdq::crc32_iscsi_sse_v4s3x3;
 
+#[cfg(target_arch = "x86")]
+use core::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::*;
 #[cfg(target_arch = "x86_64")]
 #[rustversion::since(1.89)]
 use iscsi::avx512_pclmulqdq::crc32_iscsi_avx512_v4s3x3;
 #[cfg(target_arch = "x86_64")]
 #[rustversion::since(1.89)]
 use iscsi::avx512_vpclmulqdq::crc32_iscsi_avx512_vpclmulqdq_v3x2;
-#[cfg(target_arch = "x86")]
-use std::arch::x86::*;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
 
 /// CRC32 iSCSI calculation for Rust versions before 1.89 (pre-AVX-512 support)
 ///
