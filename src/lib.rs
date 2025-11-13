@@ -151,6 +151,7 @@ use digest::{DynDigest, InvalidBufferSize};
 use std::fs::File;
 #[cfg(feature = "std")]
 use std::io::{Read, Write};
+use crate::feature_detection::get_arch_ops;
 
 mod algorithm;
 mod arch;
@@ -820,8 +821,6 @@ pub fn checksum_combine_with_params(
 /// // "x86_64-sse-pclmulqdq" - x86_64 baseline with SSE4.1 and PCLMULQDQ
 /// ```
 pub fn get_calculator_target(_algorithm: CrcAlgorithm) -> String {
-    use crate::feature_detection::get_arch_ops;
-
     let arch_ops = get_arch_ops();
     arch_ops.get_target_string()
 }
@@ -864,12 +863,11 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
 /// fusion techniques to accelerate the calculation beyond what SIMD can do alone.
 #[inline(always)]
 fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
-    use crate::feature_detection::get_arch_ops;
-    let arch_ops = get_arch_ops();
-
     #[cfg(target_arch = "aarch64")]
     {
         use crate::feature_detection::PerformanceTier;
+
+        let arch_ops = get_arch_ops();
         match arch_ops.get_tier() {
             PerformanceTier::AArch64AesSha3 | PerformanceTier::AArch64Aes => {
                 return fusion::crc32_iscsi(state as u32, data) as u64;
@@ -881,6 +879,8 @@ fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
     #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
     {
         use crate::feature_detection::PerformanceTier;
+
+        let arch_ops = get_arch_ops();
         match arch_ops.get_tier() {
             PerformanceTier::X86_64Avx512Vpclmulqdq
             | PerformanceTier::X86_64Avx512Pclmulqdq
