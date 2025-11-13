@@ -34,10 +34,12 @@ pub enum PerformanceTier {
 pub struct ArchCapabilities {
     // AArch64 features
     pub has_aes: bool, // provides PMULL support for CRC calculations (NEON is implicit)
+    pub has_crc: bool, // provides native CRC32 instructions for fusion techniques
     pub has_sha3: bool, // requires 'aes', provides EOR3 for XOR3 operations
 
     // x86/x86_64 features
     pub has_sse41: bool,
+    pub has_sse42: bool, // provides native CRC32C instructions for fusion techniques
     pub has_pclmulqdq: bool,
     pub has_avx512vl: bool, // implicitly enables avx512f, has XOR3 operations
     pub has_vpclmulqdq: bool,
@@ -81,8 +83,10 @@ unsafe fn detect_arch_capabilities() -> ArchCapabilities {
         // Other architectures use software fallback
         ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: false,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -103,14 +107,19 @@ unsafe fn detect_aarch64_features() -> ArchCapabilities {
     // AES is available on essentially all AArch64 CPUs and provides the PMULL instructions
     let has_aes = is_aarch64_feature_detected!("aes");
 
+    // CRC provides native CRC32 instructions for fusion techniques
+    let has_crc = is_aarch64_feature_detected!("crc");
+
     // SHA3 is available on modern Aarch64 CPUs, and provides the EOR3 instruction for efficient
     // XOR3 operations.
     let has_sha3 = is_aarch64_feature_detected!("sha3");
 
     ArchCapabilities {
         has_aes,
+        has_crc,
         has_sha3,
         has_sse41: false,
+        has_sse42: false,
         has_pclmulqdq: false,
         has_avx512vl: false,
         has_vpclmulqdq: false,
@@ -131,6 +140,9 @@ unsafe fn detect_x86_features() -> ArchCapabilities {
     let has_sse41 = is_x86_feature_detected!("sse4.1");
     let has_pclmulqdq = has_sse41 && is_x86_feature_detected!("pclmulqdq");
 
+    // SSE 4.2 provides native CRC32C instructions for fusion techniques
+    let has_sse42 = is_x86_feature_detected!("sse4.2");
+
     // After Rust 1.89, AVX-512VL and VPCLMULQDQ can be used if available
     let has_avx512vl =
         has_pclmulqdq && rust_version_supports_avx512 && is_x86_feature_detected!("avx512vl");
@@ -139,8 +151,10 @@ unsafe fn detect_x86_features() -> ArchCapabilities {
 
     ArchCapabilities {
         has_aes: false,
+        has_crc: false,
         has_sha3: false,
         has_sse41,
+        has_sse42,
         has_pclmulqdq,
         has_avx512vl,
         has_vpclmulqdq,
@@ -444,8 +458,10 @@ mod tests {
         // Test SHA3 + AES (highest tier) - NEON is implicit with AES
         let capabilities_sha3 = ArchCapabilities {
             has_aes: true,
+            has_crc: false,
             has_sha3: true,
             has_sse41: false,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -459,8 +475,10 @@ mod tests {
         // Test AES only (baseline tier) - NEON is implicit with AES
         let capabilities_aes = ArchCapabilities {
             has_aes: true,
+            has_crc: false,
             has_sha3: false,
             has_sse41: false,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -474,8 +492,10 @@ mod tests {
         // Test missing AES (should fall back to software)
         let capabilities_no_aes = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: false,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -496,8 +516,10 @@ mod tests {
         // Create test capabilities with AES support (NEON is implicit)
         let capabilities_with_aes = ArchCapabilities {
             has_aes: true,
+            has_crc: false,
             has_sha3: false,
             has_sse41: false,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -510,8 +532,10 @@ mod tests {
         // SHA3 requires AES to be available first
         let capabilities_with_sha3 = ArchCapabilities {
             has_aes: true,
+            has_crc: false,
             has_sha3: true,
             has_sse41: false,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -530,8 +554,10 @@ mod tests {
         // Test VPCLMULQDQ + AVX512 (highest tier) on Rust 1.89+
         let capabilities_vpclmulqdq = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: true,
             has_avx512vl: true,
             has_vpclmulqdq: true,
@@ -545,8 +571,10 @@ mod tests {
         // Test AVX512 + PCLMULQDQ (mid-tier) on Rust 1.89+
         let capabilities_avx512 = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: true,
             has_avx512vl: true,
             has_vpclmulqdq: false,
@@ -560,8 +588,10 @@ mod tests {
         // Test VPCLMULQDQ + AVX512 (highest tier) on Rust < 1.89
         let capabilities_vpclmulqdq = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: true,
             has_avx512vl: true,
             has_vpclmulqdq: true,
@@ -575,8 +605,10 @@ mod tests {
         // Test AVX512 + PCLMULQDQ (mid-tier) on Rust < 1.89
         let capabilities_avx512 = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: true,
             has_avx512vl: true,
             has_vpclmulqdq: false,
@@ -590,8 +622,10 @@ mod tests {
         // Test SSE + PCLMULQDQ (baseline tier)
         let capabilities_sse = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: true,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -605,8 +639,10 @@ mod tests {
         // Test missing PCLMULQDQ (should fall back to software)
         let capabilities_no_pclmul = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -626,8 +662,10 @@ mod tests {
         // Test SSE + PCLMULQDQ (only available tier for x86)
         let capabilities_sse = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: true,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -642,8 +680,10 @@ mod tests {
         // Create capabilities without AVX512VL to simulate x86 32-bit
         let capabilities_x86_sse = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: true,
             has_avx512vl: false, // No AVX512 on 32-bit x86
             has_vpclmulqdq: false,
@@ -658,8 +698,10 @@ mod tests {
         // Test missing PCLMULQDQ (should fall back to software)
         let capabilities_no_pclmul = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -681,8 +723,10 @@ mod tests {
         // Test feature dependencies are enforced
         let capabilities_full = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
             has_sse41: true,
+            has_sse42: false,
             has_pclmulqdq: true,
             has_avx512vl: true,
             has_vpclmulqdq: true,
@@ -719,8 +763,10 @@ mod tests {
             // All features available but Rust version too old
             let capabilities_old_rust = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: true,
                 has_vpclmulqdq: true,                // Hardware supports it
@@ -741,8 +787,10 @@ mod tests {
             // SHA3 without AES should not be possible
             let invalid_sha3_caps = ArchCapabilities {
                 has_aes: false, // Missing required dependency
+                has_crc: false,
                 has_sha3: true, // This should be impossible in real detection
                 has_sse41: false,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -758,8 +806,10 @@ mod tests {
             // VPCLMULQDQ without AVX512VL should not be possible
             let invalid_vpclmul_caps = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: false,  // Missing required dependency
                 has_vpclmulqdq: true, // This should be impossible in real detection
@@ -785,8 +835,10 @@ mod tests {
             // No features - software fallback
             let no_features = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: false,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -800,8 +852,10 @@ mod tests {
             // AES only - baseline AArch64 tier
             let aes_only = ArchCapabilities {
                 has_aes: true,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: false,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -815,8 +869,10 @@ mod tests {
             // AES + SHA3 - highest AArch64 tier
             let aes_sha3 = ArchCapabilities {
                 has_aes: true,
+                has_crc: false,
                 has_sha3: true,
                 has_sse41: false,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -835,8 +891,10 @@ mod tests {
             // No features - software fallback
             let no_features = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: false,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -850,8 +908,10 @@ mod tests {
             // SSE4.1 only - software fallback (PCLMULQDQ required)
             let sse_only = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -865,8 +925,10 @@ mod tests {
             // SSE4.1 + PCLMULQDQ - baseline x86_64 tier
             let sse_pclmul = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -880,8 +942,10 @@ mod tests {
             // SSE4.1 + PCLMULQDQ + AVX512VL but old Rust - should fall back to SSE tier
             let avx512_pclmul_old_rust = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: true,
                 has_vpclmulqdq: false,
@@ -895,8 +959,10 @@ mod tests {
             // SSE4.1 + PCLMULQDQ + AVX512VL with new Rust - mid-tier
             let avx512_pclmul_new_rust = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: true,
                 has_vpclmulqdq: false,
@@ -910,8 +976,10 @@ mod tests {
             // All features + old Rust - should fall back to SSE tier
             let all_features_old_rust = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: true,
                 has_vpclmulqdq: true,
@@ -925,8 +993,10 @@ mod tests {
             // All features + new Rust - highest tier
             let all_features_new_rust = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: true,
                 has_vpclmulqdq: true,
@@ -945,8 +1015,10 @@ mod tests {
             // No features - software fallback
             let no_features = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: false,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -961,8 +1033,10 @@ mod tests {
             // since the test function doesn't distinguish between x86 and x86_64 architectures
             let sse_pclmul = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: false, // AVX512 not available on 32-bit x86
                 has_vpclmulqdq: false,
@@ -1012,8 +1086,10 @@ mod tests {
             // Start with highest tier capabilities
             let mut capabilities = ArchCapabilities {
                 has_aes: true,
+                has_crc: false,
                 has_sha3: true,
                 has_sse41: false,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -1048,8 +1124,10 @@ mod tests {
             // Start with highest tier capabilities
             let mut capabilities = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: true,
                 has_vpclmulqdq: true,
@@ -1097,8 +1175,10 @@ mod tests {
 
             let capabilities_with_vpclmulqdq = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: true,
                 has_vpclmulqdq: true,
@@ -1119,8 +1199,10 @@ mod tests {
             // AArch64: SHA3 available but AES not (impossible in real hardware, but test safety)
             let aarch64_partial = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: true, // This would be impossible in real detection
                 has_sse41: false,
+                has_sse42: false,
                 has_pclmulqdq: false,
                 has_avx512vl: false,
                 has_vpclmulqdq: false,
@@ -1135,8 +1217,10 @@ mod tests {
             // x86_64: VPCLMULQDQ available but AVX512VL not (impossible in real hardware)
             let x86_64_partial = ArchCapabilities {
                 has_aes: false,
+                has_crc: false,
                 has_sha3: false,
                 has_sse41: true,
+                has_sse42: false,
                 has_pclmulqdq: true,
                 has_avx512vl: false,
                 has_vpclmulqdq: true, // This would be impossible in real detection
@@ -1158,9 +1242,11 @@ mod software_fallback_tests {
     fn test_aarch64_without_aes_falls_back_to_software() {
         // Test that AArch64 without AES support falls back to software implementation
         let capabilities_no_aes = ArchCapabilities {
-            has_aes: false,  // No AES support
+            has_aes: false, // No AES support
+            has_crc: false,
             has_sha3: false, // SHA3 requires AES, so also false
             has_sse41: false,
+            has_sse42: false,
             has_pclmulqdq: false,
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -1180,8 +1266,10 @@ mod software_fallback_tests {
         // Test that x86 without SSE4.1/PCLMULQDQ falls back to software implementation
         let capabilities_no_pclmul = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
-            has_sse41: true,      // SSE4.1 available
+            has_sse41: true, // SSE4.1 available
+            has_sse42: false,
             has_pclmulqdq: false, // But PCLMULQDQ not available
             has_avx512vl: false,
             has_vpclmulqdq: false,
@@ -1198,8 +1286,10 @@ mod software_fallback_tests {
         // Test x86 without SSE4.1
         let capabilities_no_sse = ArchCapabilities {
             has_aes: false,
+            has_crc: false,
             has_sha3: false,
-            has_sse41: false,     // No SSE4.1 support
+            has_sse41: false, // No SSE4.1 support
+            has_sse42: false,
             has_pclmulqdq: false, // PCLMULQDQ requires SSE4.1
             has_avx512vl: false,
             has_vpclmulqdq: false,

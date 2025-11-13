@@ -864,25 +864,34 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
 /// fusion techniques to accelerate the calculation beyond what SIMD can do alone.
 #[inline(always)]
 fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
+    use crate::feature_detection::get_arch_ops;
+    let arch_ops = get_arch_ops();
+
     #[cfg(target_arch = "aarch64")]
     {
-        use std::arch::is_aarch64_feature_detected;
-        if is_aarch64_feature_detected!("aes") && is_aarch64_feature_detected!("crc") {
-            return fusion::crc32_iscsi(state as u32, data) as u64;
+        use crate::feature_detection::PerformanceTier;
+        match arch_ops.get_tier() {
+            PerformanceTier::AArch64AesSha3 | PerformanceTier::AArch64Aes => {
+                return fusion::crc32_iscsi(state as u32, data) as u64;
+            }
+            _ => {}
         }
     }
 
-    // both aarch64 and x86 have native CRC-32/ISCSI support, so we can use fusion
     #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
     {
-        use std::arch::is_x86_feature_detected;
-        if is_x86_feature_detected!("sse4.2") && is_x86_feature_detected!("pclmulqdq") {
-            return fusion::crc32_iscsi(state as u32, data) as u64;
+        use crate::feature_detection::PerformanceTier;
+        match arch_ops.get_tier() {
+            PerformanceTier::X86_64Avx512Vpclmulqdq
+            | PerformanceTier::X86_64Avx512Pclmulqdq
+            | PerformanceTier::X86_64SsePclmulqdq
+            | PerformanceTier::X86SsePclmulqdq => {
+                return fusion::crc32_iscsi(state as u32, data) as u64;
+            }
+            _ => {}
         }
     }
 
-    // Fallback to traditional calculation for other architectures, which will eventually fall back
-    // to software tables if necessary
     Calculator::calculate(state, data, _params)
 }
 
@@ -893,17 +902,19 @@ fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
 /// so we use the traditional calculation.
 #[inline(always)]
 fn crc32_iso_hdlc_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
-    // aarch64 CPUs have native CRC-32/ISO-HDLC support, so we can use the fusion implementation
     #[cfg(target_arch = "aarch64")]
     {
-        use std::arch::is_aarch64_feature_detected;
-        if is_aarch64_feature_detected!("aes") && is_aarch64_feature_detected!("crc") {
-            return fusion::crc32_iso_hdlc(state as u32, data) as u64;
+        use crate::feature_detection::{get_arch_ops, PerformanceTier};
+        let arch_ops = get_arch_ops();
+
+        match arch_ops.get_tier() {
+            PerformanceTier::AArch64AesSha3 | PerformanceTier::AArch64Aes => {
+                return fusion::crc32_iso_hdlc(state as u32, data) as u64;
+            }
+            _ => {}
         }
     }
 
-    // x86 CPUs don't have native CRC-32/ISO-HDLC support, so there's no fusion to be had, use
-    // traditional calculation, which will eventually fall back to software tables if necessary
     Calculator::calculate(state, data, _params)
 }
 
