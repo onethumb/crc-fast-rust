@@ -147,11 +147,11 @@ use crate::structs::Calculator;
 use crate::traits::CrcCalculator;
 use digest::{DynDigest, InvalidBufferSize};
 
+use crate::feature_detection::get_arch_ops;
 #[cfg(feature = "std")]
 use std::fs::File;
 #[cfg(feature = "std")]
 use std::io::{Read, Write};
-use crate::feature_detection::get_arch_ops;
 
 mod algorithm;
 mod arch;
