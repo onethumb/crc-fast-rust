@@ -3,7 +3,7 @@
 //! Tests that the library works in WebAssembly. These tests run natively
 //! (test framework requires std) but exercise code paths used in WASM.
 //!
-//! Run tests: cargo test --test wasm_test
+//! Run tests: cargo test --test wasm_tests
 
 use crc_fast::{checksum, CrcAlgorithm, Digest};
 

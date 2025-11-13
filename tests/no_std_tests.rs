@@ -3,7 +3,7 @@
 //! Tests the library works without std. The test framework requires std,
 //! but this exercises all no_std code paths.
 //!
-//! Run tests: cargo test --test real_no_std_test
+//! Run tests: cargo test --test no_std_tests
 
 use crc_fast::{checksum, CrcAlgorithm, Digest};
 
