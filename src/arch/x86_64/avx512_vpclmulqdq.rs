@@ -19,10 +19,10 @@ use crate::structs::CrcState;
 use crate::traits::{ArchOps, EnhancedCrcWidth};
 
 #[rustversion::since(1.89)]
-use std::arch::x86_64::*;
+use core::arch::x86_64::*;
 
 #[rustversion::since(1.89)]
-use std::ops::BitXor;
+use core::ops::BitXor;
 
 /// Implements the ArchOps trait using 512-bit AVX-512 and VPCLMULQDQ instructions at 512 bits.
 /// Delegates to X86SsePclmulqdqOps for standard 128-bit operations

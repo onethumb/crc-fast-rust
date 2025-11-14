@@ -3,10 +3,45 @@
 //! Feature detection system for safe and efficient hardware acceleration across different
 //! platforms.
 
+#[cfg(all(
+    not(feature = "std"),
+    any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+))]
+use spin::Once;
+#[cfg(all(
+    feature = "std",
+    any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+))]
 use std::sync::OnceLock;
 
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+extern crate alloc;
+#[cfg(all(
+    feature = "alloc",
+    not(feature = "std"),
+    any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+))]
+use alloc::string::{String, ToString};
+#[cfg(any(
+    test,
+    all(
+        feature = "std",
+        any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+    )
+))]
+use std::string::{String, ToString};
+
 /// Global ArchOps instance cache - initialized once based on feature detection results
+#[cfg(all(
+    feature = "std",
+    any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+))]
 static ARCH_OPS_INSTANCE: OnceLock<ArchOpsInstance> = OnceLock::new();
+#[cfg(all(
+    not(feature = "std"),
+    any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+))]
+static ARCH_OPS_INSTANCE: Once<ArchOpsInstance> = Once::new();
 
 /// Performance tiers representing different hardware capability levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +85,13 @@ pub struct ArchCapabilities {
 
 /// Helper function to convert a performance tier to a human-readable target string
 /// Format: {architecture}-{intrinsics-family}-{intrinsics-features}
+#[cfg(any(
+    test,
+    all(
+        feature = "alloc",
+        any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+    )
+))]
 #[inline(always)]
 fn tier_to_target_string(tier: PerformanceTier) -> String {
     match tier {
@@ -67,6 +109,7 @@ fn tier_to_target_string(tier: PerformanceTier) -> String {
 ///
 /// # Safety
 /// Uses runtime feature detection which may access CPU-specific registers
+#[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 unsafe fn detect_arch_capabilities() -> ArchCapabilities {
     #[cfg(target_arch = "aarch64")]
     {
@@ -100,7 +143,7 @@ unsafe fn detect_arch_capabilities() -> ArchCapabilities {
 /// Note: NEON is always available on AArch64 and is implicitly enabled by AES support.
 /// AES support provides the PMULL instructions needed for CRC calculations.
 #[inline(always)]
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", feature = "std"))]
 unsafe fn detect_aarch64_features() -> ArchCapabilities {
     use std::arch::is_aarch64_feature_detected;
 
@@ -127,9 +170,25 @@ unsafe fn detect_aarch64_features() -> ArchCapabilities {
     }
 }
 
+#[inline(always)]
+#[cfg(all(target_arch = "aarch64", not(feature = "std")))]
+unsafe fn detect_aarch64_features() -> ArchCapabilities {
+    ArchCapabilities {
+        has_aes: cfg!(target_feature = "aes"),
+        has_crc: cfg!(target_feature = "crc"),
+        has_sha3: cfg!(target_feature = "sha3"),
+        has_sse41: false,
+        has_sse42: false,
+        has_pclmulqdq: false,
+        has_avx512vl: false,
+        has_vpclmulqdq: false,
+        rust_version_supports_avx512: false,
+    }
+}
+
 /// x86/x86_64-specific feature detection
 #[inline(always)]
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "std"))]
 unsafe fn detect_x86_features() -> ArchCapabilities {
     use std::arch::is_x86_feature_detected;
 
@@ -148,6 +207,32 @@ unsafe fn detect_x86_features() -> ArchCapabilities {
         has_pclmulqdq && rust_version_supports_avx512 && is_x86_feature_detected!("avx512vl");
     let has_vpclmulqdq =
         has_avx512vl && rust_version_supports_avx512 && is_x86_feature_detected!("vpclmulqdq");
+
+    ArchCapabilities {
+        has_aes: false,
+        has_crc: false,
+        has_sha3: false,
+        has_sse41,
+        has_sse42,
+        has_pclmulqdq,
+        has_avx512vl,
+        has_vpclmulqdq,
+        rust_version_supports_avx512,
+    }
+}
+
+#[inline(always)]
+#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), not(feature = "std")))]
+unsafe fn detect_x86_features() -> ArchCapabilities {
+    let rust_version_supports_avx512 = check_rust_version_supports_avx512();
+
+    let has_sse41 = cfg!(target_feature = "sse4.1");
+    let has_sse42 = cfg!(target_feature = "sse4.2");
+    let has_pclmulqdq = has_sse41 && cfg!(target_feature = "pclmulqdq");
+    let has_avx512vl =
+        has_pclmulqdq && rust_version_supports_avx512 && cfg!(target_feature = "avx512vl");
+    let has_vpclmulqdq =
+        has_avx512vl && rust_version_supports_avx512 && cfg!(target_feature = "vpclmulqdq");
 
     ArchCapabilities {
         has_aes: false,
@@ -221,6 +306,7 @@ pub(crate) fn select_performance_tier(capabilities: &ArchCapabilities) -> Perfor
 
 /// Enum that holds the different ArchOps implementations for compile-time dispatch
 /// This avoids the need for trait objects while still providing factory-based selection
+#[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 #[rustversion::since(1.89)]
 #[derive(Debug, Clone, Copy)]
 pub enum ArchOpsInstance {
@@ -238,6 +324,7 @@ pub enum ArchOpsInstance {
     SoftwareFallback,
 }
 
+#[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 #[rustversion::before(1.89)]
 #[derive(Debug, Clone, Copy)]
 pub enum ArchOpsInstance {
@@ -251,6 +338,7 @@ pub enum ArchOpsInstance {
     SoftwareFallback,
 }
 
+#[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 impl ArchOpsInstance {
     #[inline(always)]
     #[rustversion::since(1.89)]
@@ -285,6 +373,7 @@ impl ArchOpsInstance {
     }
 
     /// Get a human-readable target string describing the active configuration
+    #[cfg(feature = "alloc")]
     #[inline(always)]
     pub fn get_target_string(&self) -> String {
         tier_to_target_string(self.get_tier())
@@ -296,8 +385,20 @@ impl ArchOpsInstance {
 /// This function provides access to the cached ArchOps instance that was selected based on
 /// feature detection results at library initialization time, eliminating runtime feature
 /// detection overhead from hot paths.
+#[cfg(all(
+    feature = "std",
+    any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+))]
 pub fn get_arch_ops() -> &'static ArchOpsInstance {
     ARCH_OPS_INSTANCE.get_or_init(create_arch_ops)
+}
+
+#[cfg(all(
+    not(feature = "std"),
+    any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+))]
+pub fn get_arch_ops() -> &'static ArchOpsInstance {
+    ARCH_OPS_INSTANCE.call_once(create_arch_ops)
 }
 
 /// Factory function that creates the appropriate ArchOps struct based on cached feature detection
@@ -305,6 +406,7 @@ pub fn get_arch_ops() -> &'static ArchOpsInstance {
 /// This function uses the cached feature detection results to select the optimal
 /// architecture-specific implementation at library initialization time, eliminating
 /// runtime feature detection overhead from hot paths.
+#[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 fn create_arch_ops() -> ArchOpsInstance {
     let capabilities = unsafe { detect_arch_capabilities() };
     let tier = select_performance_tier(&capabilities);
@@ -314,6 +416,7 @@ fn create_arch_ops() -> ArchOpsInstance {
 
 /// Helper function to create ArchOpsInstance from a performance tier for Rust 1.89+ (when AVX512
 /// stabilized)
+#[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 #[rustversion::since(1.89)]
 fn create_arch_ops_from_tier(tier: PerformanceTier) -> ArchOpsInstance {
     match tier {
@@ -356,6 +459,7 @@ fn create_arch_ops_from_tier(tier: PerformanceTier) -> ArchOpsInstance {
 
 /// Helper function to create ArchOpsInstance from a performance tier for Rust <1.89 (before AVX512
 /// stabilized)
+#[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 #[rustversion::before(1.89)]
 fn create_arch_ops_from_tier(tier: PerformanceTier) -> ArchOpsInstance {
     match tier {

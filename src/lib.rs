@@ -131,6 +131,62 @@
 //!
 //! assert_eq!(checksum, 0xcbf43926);
 //! ```
+//!
+//! # no_std Support
+//!
+//! Supports `no_std` environments. Use `default-features = false` in Cargo.toml.
+//!
+//! Note: When using this library in a `no_std` environment, the final binary must provide:
+//! - A `#[panic_handler]` (e.g., via the `panic-halt` crate)
+//! - A `#[global_allocator]` if using the `alloc` feature
+
+// Provide a panic handler for no_std library checks
+// Disabled with default-features = false (which binaries should use)
+#[cfg(all(
+    feature = "panic-handler",
+    not(feature = "std"),
+    not(test),
+    not(doctest)
+))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+
+// Provide a global allocator for no_std + alloc library checks
+// Disabled with default-features = false (which binaries should use)
+#[cfg(all(
+    feature = "panic-handler",
+    feature = "alloc",
+    not(feature = "std"),
+    not(test),
+    not(doctest)
+))]
+#[global_allocator]
+static ALLOCATOR: StubAllocator = StubAllocator;
+
+#[cfg(all(
+    feature = "panic-handler",
+    feature = "alloc",
+    not(feature = "std"),
+    not(test),
+    not(doctest)
+))]
+struct StubAllocator;
+
+#[cfg(all(
+    feature = "panic-handler",
+    feature = "alloc",
+    not(feature = "std"),
+    not(test),
+    not(doctest)
+))]
+unsafe impl core::alloc::GlobalAlloc for StubAllocator {
+    unsafe fn alloc(&self, _layout: core::alloc::Layout) -> *mut u8 {
+        core::ptr::null_mut()
+    }
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: core::alloc::Layout) {}
+}
 
 use crate::crc32::consts::{
     CRC32_AIXM, CRC32_AUTOSAR, CRC32_BASE91_D, CRC32_BZIP2, CRC32_CD_ROM_EDC, CRC32_CKSUM,
@@ -138,6 +194,7 @@ use crate::crc32::consts::{
 };
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+#[cfg(feature = "std")]
 use crate::crc32::fusion;
 
 use crate::crc64::consts::{
@@ -145,13 +202,24 @@ use crate::crc64::consts::{
 };
 use crate::structs::Calculator;
 use crate::traits::CrcCalculator;
-use digest::{DynDigest, InvalidBufferSize};
+#[cfg(feature = "alloc")]
+use digest::DynDigest;
+#[cfg(feature = "alloc")]
+use digest::InvalidBufferSize;
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 use crate::feature_detection::get_arch_ops;
 #[cfg(feature = "std")]
 use std::fs::File;
 #[cfg(feature = "std")]
 use std::io::{Read, Write};
+
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+extern crate alloc;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::boxed::Box;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::string::String;
 
 mod algorithm;
 mod arch;
@@ -162,6 +230,7 @@ mod crc32;
 mod crc64;
 mod enums;
 mod feature_detection;
+#[cfg(feature = "ffi")]
 mod ffi;
 mod generate;
 mod structs;
@@ -327,6 +396,7 @@ pub struct Digest {
     calculator: CalculatorFn,
 }
 
+#[cfg(feature = "alloc")]
 impl DynDigest for Digest {
     #[inline(always)]
     fn update(&mut self, data: &[u8]) {
@@ -820,9 +890,24 @@ pub fn checksum_combine_with_params(
 /// // "x86_64-avx512-vpclmulqdq" - x86_64 with VPCLMULQDQ support
 /// // "x86_64-sse-pclmulqdq" - x86_64 baseline with SSE4.1 and PCLMULQDQ
 /// ```
+#[cfg(all(
+    feature = "alloc",
+    any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")
+))]
 pub fn get_calculator_target(_algorithm: CrcAlgorithm) -> String {
     let arch_ops = get_arch_ops();
     arch_ops.get_target_string()
+}
+
+/// Fallback version of get_calculator_target for unsupported architectures
+#[cfg(all(
+    feature = "alloc",
+    not(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))
+))]
+pub fn get_calculator_target(_algorithm: CrcAlgorithm) -> String {
+    extern crate alloc;
+    use alloc::string::ToString;
+    "software-fallback-tables".to_string()
 }
 
 /// Returns the calculator function and parameters for the specified CRC algorithm.
@@ -863,7 +948,7 @@ fn get_calculator_params(algorithm: CrcAlgorithm) -> (CalculatorFn, CrcParams) {
 /// fusion techniques to accelerate the calculation beyond what SIMD can do alone.
 #[inline(always)]
 fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(all(target_arch = "aarch64", feature = "std"))]
     {
         use crate::feature_detection::PerformanceTier;
 
@@ -876,7 +961,7 @@ fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
         }
     }
 
-    #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+    #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), feature = "std"))]
     {
         use crate::feature_detection::PerformanceTier;
 
@@ -902,7 +987,7 @@ fn crc32_iscsi_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
 /// so we use the traditional calculation.
 #[inline(always)]
 fn crc32_iso_hdlc_calculator(state: u64, data: &[u8], _params: CrcParams) -> u64 {
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(all(target_arch = "aarch64", feature = "std"))]
     {
         use crate::feature_detection::{get_arch_ops, PerformanceTier};
         let arch_ops = get_arch_ops();
@@ -1517,6 +1602,7 @@ mod lib {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // Intentionally testing indexed get_key() method
     fn test_crc_keys_storage_fold_256() {
         let test_keys = [
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
@@ -1538,6 +1624,7 @@ mod lib {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // Intentionally testing indexed get_key() method
     fn test_crc_keys_storage_future_test() {
         let test_keys = [
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
@@ -1560,6 +1647,7 @@ mod lib {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // Intentionally testing indexed get_key() and get_key_checked() methods
     fn test_crc_params_safe_accessors() {
         // Create a test CrcParams with known keys
         let test_keys = [
