@@ -175,8 +175,10 @@ unsafe fn detect_aarch64_features() -> ArchCapabilities {
 unsafe fn detect_aarch64_features() -> ArchCapabilities {
     ArchCapabilities {
         has_aes: cfg!(target_feature = "aes"),
+        has_crc: cfg!(target_feature = "crc"),
         has_sha3: cfg!(target_feature = "sha3"),
         has_sse41: false,
+        has_sse42: false,
         has_pclmulqdq: false,
         has_avx512vl: false,
         has_vpclmulqdq: false,
@@ -225,6 +227,7 @@ unsafe fn detect_x86_features() -> ArchCapabilities {
     let rust_version_supports_avx512 = check_rust_version_supports_avx512();
 
     let has_sse41 = cfg!(target_feature = "sse4.1");
+    let has_sse42 = cfg!(target_feature = "sse4.2");
     let has_pclmulqdq = has_sse41 && cfg!(target_feature = "pclmulqdq");
     let has_avx512vl =
         has_pclmulqdq && rust_version_supports_avx512 && cfg!(target_feature = "avx512vl");
@@ -233,8 +236,10 @@ unsafe fn detect_x86_features() -> ArchCapabilities {
 
     ArchCapabilities {
         has_aes: false,
+        has_crc: false,
         has_sha3: false,
         has_sse41,
+        has_sse42,
         has_pclmulqdq,
         has_avx512vl,
         has_vpclmulqdq,
