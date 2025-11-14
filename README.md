@@ -68,12 +68,15 @@ DESTDIR=/my/custom/path make install
 
 The library supports various feature flags for different environments:
 
-* `std` (default) - Standard library support, includes `alloc`
+### Default Features
+* `std` - Standard library support, includes `alloc`
+* `ffi` - C/C++ FFI bindings for shared library (will become optional in v2.0)
+* `panic-handler` - Provides panic handler for `no_std` environments (disable when building binaries)
+
+### Optional Features
 * `alloc` - Heap allocation support (enables `Digest` trait, custom CRC params, checksum combining)
 * `cache` - Caches generated constants for custom CRC parameters (requires `alloc`)
 * `cli` - Enables command-line tools (`checksum`, `arch-check`, `get-custom-params`)
-* `ffi` - C/C++ FFI bindings for shared library
-* `panic-handler` - Provides panic handler for `no_std` environments (disable when building binaries)
 
 ### Building for `no_std`
 
